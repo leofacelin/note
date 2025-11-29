@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的云端记事本</title> <style>
+        /* --- 1. 整体底色：模拟横线记事本 --- */
+        body {
+            font-family: "Comic Sans MS", "Chalkboard SE", sans-serif; /* 手写风格字体 */
+            max-width: 700px;
+            margin: 0 auto;
+            /* 调整顶部内边距，因为去掉了H1，稍微留点呼吸感 */
+            padding: 3rem 1rem 2rem 1rem; 
+            color: #333;
+            background-color: #fdfbf7; /* 米色纸张底色 */
+            background-image: linear-gradient(#e1e1e1 1px, transparent 1px);
+            background-size: 100% 2rem; /* 行高 */
+            line-height: 1.6;
+        }
+
+        /* 输入区样式 */
+        .input-group { 
+            background: #fff; 
+            padding: 15px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; 
+            border: 1px solid #ddd;
+        }
+        #inputBox { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; }
+        #fileInput { padding: 10px; font-size: 12px; }
+        button { padding: 8px 20px; cursor: pointer; background: #333; color: #fff; border: none; border-radius: 4px; transition: 0.2s; }
+        button:hover { background: #555; }
+        button:disabled { background: #ccc; }
+
+        /* --- 2. 笔记卡片：模拟 Post-it 便利贴 --- */
+        ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 15px; }
+        li { 
+            background-color: #feff9c; /* Post-it 经典黄 */
+            padding: 15px 20px; 
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1); 
+            /* 稍微旋转一点点，显得随意 */
+            transform: rotate(-0.5deg);
+            transition: transform 0.2s;
+            position: relative; 
+        }
+        li:hover {
+            transform: scale(1.01) rotate(0deg); /* 悬停时放大摆正 */
+            z-index: 10;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .note-header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+        .note-text { font-size: 18px; font-weight: 500; word-break: break-all; }
+        
+        /* 时间戳样式 */
+        .note-time {
+            display: block;
+            font-size: 12px;
+            color: #887b4e; /* 深黄色文字 */
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* --- 3. 删除按钮：悬停显示 --- */
+        .delete-btn { 
+            cursor: pointer; 
+            font-size: 18px; 
+            margin-left: 15px; 
+            opacity: 0; /* 默认隐藏 */
+            transition: opacity 0.2s;
+        }
+        li:hover .delete-btn { opacity: 1; /* 悬停显示 */ }
+
+        /* --- 4. 图片样式：缩小尺寸 --- */
+        .note-img { 
+            max-height: 150px; /* 限制最大高度 */
+            max-width: 100%;
+            border-radius: 4px; 
+            display: block; 
+            margin-top: 10px; 
+            border: 4px solid #fff; /* 照片白边效果 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: zoom-in;
+        }
+
+        .status { font-size: 12px; color: #999; text-align: center; margin-top: 10px; background: rgba(255,255,255,0.8); display: inline-block; padding: 2px 10px; border-radius: 10px;}
+
+        /* --- 5. 自定义删除确认弹窗 --- */
+        #confirmModal {
+            display: none;
+            position: absolute;
+            background: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 6px;
+            z-index: 1000;
+            min-width: 150px;
+            text-align: center;
+        }
+        #confirmModal p { margin: 0 0 10px 0; font-size: 14px; }
+        .modal-btn { 
+            padding: 4px 10px; font-size: 12px; margin: 0 5px; border-radius: 3px; cursor: pointer; border: none; 
+        }
+        .btn-yes { background: #ff4d4f; color: white; }
+        .btn-no { background: #eee; color: #333; }
+
+    </style>
+</head>
+<body>
+    
+    <div class="input-group">
+        <input type="text" id="inputBox" placeholder="记录当下的灵感..." onkeypress="handleEnter(event)">
+        <input type="file" id="fileInput" accept="image/*">
+        <button id="addBtn" onclick="addNote()">记下来</button>
+    </div>
+
+    <div style="text-align: center;">
+        <div class="status" id="statusMsg">准备就绪</div>
+    </div>
+
+    <ul id="list"></ul>
+
+    <div id="confirmModal">
+        <p>确定把这条笔记撕掉吗？</p>
+        <button class="modal-btn btn-yes" onclick="confirmDelete()">撕掉</button>
+        <button class="modal-btn btn-no" onclick="closeModal()">留着</button>
+    </div>
+
+    <script>
+        // ==========================================
+        // 👇 记得重新填这里！👇
+        // ==========================================
+        const BIN_ID = '692adac043b1c97be9cca688'; 
+        const API_KEY = '$2a$10$Nk.7e1B.alPcFrs75QBo5.NE80f09zyL8lYQBrPP6.o2pU7zbuEkC';
+        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be'; 
+ 
+        // ==========================================
+
+        const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+        let currentData = { notes: [] };
+        let pendingDeleteId = null; 
+
+        // 1. 初始化加载
+        async function loadData() {
+            updateStatus('正在翻开笔记本...');
+            const localCache = localStorage.getItem('my_notes_cache_v2'); 
+            if (localCache) {
+                currentData = JSON.parse(localCache);
+                render(); 
+            }
+
+            try {
+                const response = await fetch(URL, {
+                    method: 'GET',
+                    headers: { 'X-Access-Key': API_KEY } 
+                });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                currentData = result.record;
+                localStorage.setItem('my_notes_cache_v2', JSON.stringify(currentData));
+                render();
+                updateStatus('✅ 同步完成');
+            } catch (error) {
+                console.error(error);
+                if (!localCache) updateStatus('❌ 笔记本打不开 (检查网络/Key)');
+            }
+        }
+
+        // 2. 上传图片
+        async function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+            try {
+                const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
+                    method: 'POST', body: formData
+                });
+                const data = await res.json();
+                return data.success ? data.data.url : null;
+            } catch (e) {
+                alert('图片上传失败');
+                return null;
+            }
+        }
+
+        // 3. 添加笔记
+        async function addNote() {
+            const input = document.getElementById('inputBox');
+            const fileInput = document.getElementById('fileInput');
+            const btn = document.getElementById('addBtn');
+            const text = input.value.trim();
+            const file = fileInput.files[0];
+
+            if (!text && !file) return;
+
+            btn.disabled = true;
+            btn.textContent = '记录中...';
+            updateStatus('正在记录...');
+
+            let imgUrl = null;
+            if (file) {
+                updateStatus('正在贴图...');
+                imgUrl = await uploadImage(file);
+                if (!imgUrl) { btn.disabled = false; btn.textContent = '记下来'; return; }
+            }
+
+            // 获取东八区时间
+            const now = new Date();
+            const timeString = now.toLocaleString('zh-CN', {
+                timeZone: 'Asia/Shanghai',
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            }); 
+
+            if (!currentData.notes) currentData.notes = [];
+            currentData.notes.push({
+                id: Date.now(),
+                text: text,
+                img: imgUrl,
+                date: timeString 
+            });
+
+            input.value = '';
+            fileInput.value = '';
+            
+            render();
+            await saveData();
+            
+            btn.disabled = false;
+            btn.textContent = '记下来';
+        }
+
+        // 4. 保存
+        async function saveData() {
+            updateStatus('正在存档...');
+            localStorage.setItem('my_notes_cache_v2', JSON.stringify(currentData));
+            try {
+                await fetch(URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Access-Key': API_KEY },
+                    body: JSON.stringify(currentData)
+                });
+                updateStatus('✅ 已存档');
+            } catch (error) {
+                updateStatus('⚠️ 存档失败 (网络)');
+            }
+        }
+
+        // 5. 渲染列表
+        function render() {
+            const listEl = document.getElementById('list');
+            listEl.innerHTML = ''; 
+            const notes = Array.isArray(currentData.notes) ? currentData.notes : [];
+            const sortedNotes = notes.slice().reverse(); 
+
+            sortedNotes.forEach((item) => {
+                const li = document.createElement('li');
+                
+                const header = document.createElement('div');
+                header.className = 'note-header';
+                
+                const contentDiv = document.createElement('div');
+                const span = document.createElement('span');
+                span.className = 'note-text';
+                span.textContent = item.text || '';
+                
+                const timeSpan = document.createElement('span');
+                timeSpan.className = 'note-time';
+                timeSpan.textContent = item.date ? item.date : ''; 
+                
+                contentDiv.appendChild(span);
+                contentDiv.appendChild(timeSpan);
+
+                const delBtn = document.createElement('span');
+                delBtn.className = 'delete-btn';
+                delBtn.textContent = '🗑️'; 
+                delBtn.onclick = (e) => showDeleteModal(e, item.id);
+
+                header.appendChild(contentDiv);
+                header.appendChild(delBtn);
+                li.appendChild(header);
+
+                if (item.img) {
+                    const img = document.createElement('img');
+                    img.src = item.img;
+                    img.className = 'note-img';
+                    img.onclick = () => window.open(item.img, '_blank');
+                    li.appendChild(img);
+                }
+
+                listEl.appendChild(li);
+            });
+        }
+
+        // 6. 浮动删除弹窗逻辑
+        function showDeleteModal(event, id) {
+            event.stopPropagation(); 
+            pendingDeleteId = id; 
+            
+            const modal = document.getElementById('confirmModal');
+            let top = event.pageY + 10;
+            let left = event.pageX - 80; 
+            modal.style.top = top + 'px';
+            modal.style.left = left + 'px';
+            modal.style.display = 'block';
+        }
+
+        async function confirmDelete() {
+            if (!pendingDeleteId) return;
+            const index = currentData.notes.findIndex(n => n.id === pendingDeleteId);
+            if (index > -1) {
+                currentData.notes.splice(index, 1);
+                render();
+                closeModal(); 
+                await saveData();
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+            pendingDeleteId = null;
+        }
+
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('confirmModal');
+            if (!event.target.classList.contains('delete-btn') && !modal.contains(event.target)) {
+                closeModal();
+            }
+        });
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') addNote();
+        }
+
+        function updateStatus(msg) {
+            document.getElementById('statusMsg').textContent = msg;
+        }
+
+        loadData();
+    </script>
+</body>
+</html>

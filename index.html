@@ -7,17 +7,28 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <title>我的云端记事本</title> 
+    <title>我的云端记事本</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         html, body { scrollbar-width: none; -ms-overflow-style: none; }
         ::-webkit-scrollbar { display: none; }
 
         /* --- 1. 基础设置 --- */
         body {
-            font-family: "Comic Sans MS", "Chalkboard SE", sans-serif;
+            /* 字体栈逻辑：
+               1. Roboto: 用于英文、数字。
+               2. "Source Han Sans CN", "Noto Sans SC": 思源黑体（如果本地有或系统支持）。
+               3. "PingFang SC": 苹果设备的中文字体。
+               4. "Microsoft YaHei": Windows 设备的雅黑。
+               5. sans-serif: 最后的保底无衬线字体。
+            */
+            font-family: 'Roboto', "Source Han Sans CN", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            
             max-width: 700px;
             margin: 0 auto;
-            /* 顶部留出一点空间给浮动提示，虽然是悬浮的，但避免视觉太挤 */
             padding: 2rem 1rem 4rem 1rem; 
             color: #333;
             background-color: #fdfbf7;
@@ -36,9 +47,19 @@
             border: 1px solid #ddd;
             cursor: default; 
         }
-        #inputBox { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; }
-        #fileInput { padding: 10px; font-size: 12px; }
-        button { padding: 8px 20px; cursor: pointer; background: #333; color: #fff; border: none; border-radius: 4px; transition: 0.2s; }
+        
+        /* 输入框继承字体，确保输入时也是Roboto/思源黑 */
+        #inputBox { 
+            flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; 
+            font-family: inherit; 
+        }
+        
+        #fileInput { padding: 10px; font-size: 12px; font-family: inherit; }
+        
+        button { 
+            padding: 8px 20px; cursor: pointer; background: #333; color: #fff; border: none; border-radius: 4px; transition: 0.2s; 
+            font-family: inherit; font-weight: 500; /* Roboto Medium */
+        }
         button:hover { background: #555; }
         button:disabled { background: #ccc; }
 
@@ -92,8 +113,19 @@
         }
 
         .note-header { display: flex; flex-direction: column; width: 100%; }
-        .note-text { font-size: 18px; font-weight: 500; word-break: break-all; }
-        .note-time { display: block; font-size: 12px; color: #887b4e; margin-top: 5px; font-style: italic; }
+        
+        .note-text { 
+            font-size: 18px; 
+            font-weight: 500; /* 使用 Roboto 的 Medium 字重，更清晰 */
+            word-break: break-all; 
+        }
+        
+        .note-time { 
+            display: block; font-size: 12px; color: #887b4e; margin-top: 5px; 
+            /* 时间包含数字，Roboto 会让它很好看 */
+            font-weight: 400; 
+            opacity: 0.8;
+        }
 
         .note-img { 
             max-height: 150px; width: auto; max-width: 100%;
@@ -103,33 +135,18 @@
             cursor: zoom-in;
         }
 
-        /* ==========================================
-           👇 新增：浮动状态提示气泡 (Toast) 👇
-           ========================================== */
+        /* 状态气泡 */
         #statusMsg {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            
-            background: rgba(0, 0, 0, 0.75); /* 黑色半透明背景 */
-            color: white;
-            font-size: 13px;
-            padding: 8px 16px;
-            border-radius: 20px; /* 胶囊形状 */
-            
-            z-index: 9999;
-            opacity: 0; /* 默认隐藏 */
-            pointer-events: none; /* 隐藏时不阻挡点击 */
-            transition: opacity 0.3s ease; /* 淡入淡出动画 */
-            backdrop-filter: blur(4px); /* 磨砂玻璃效果 (仅支持的浏览器) */
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75); color: white;
+            font-size: 13px; padding: 8px 16px; border-radius: 20px; 
+            z-index: 9999; opacity: 0; pointer-events: none; 
+            transition: opacity 0.3s ease; backdrop-filter: blur(4px); 
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            /* 状态条也使用 Roboto */
+            font-family: 'Roboto', sans-serif;
         }
-
-        /* 显示状态 */
-        #statusMsg.show {
-            opacity: 1;
-        }
+        #statusMsg.show { opacity: 1; }
 
         /* --- 弹窗 --- */
         #confirmModal {
@@ -145,7 +162,7 @@
             background: rgba(0,0,0,0.3); z-index: 1999;
         }
         #confirmModal p { margin: 0 0 20px 0; font-size: 16px; color: #333; }
-        .modal-btn { padding: 8px 20px; font-size: 14px; margin: 0 10px; border-radius: 4px; cursor: pointer; border: none; }
+        .modal-btn { padding: 8px 20px; font-size: 14px; margin: 0 10px; border-radius: 4px; cursor: pointer; border: none; font-family: inherit; }
         .btn-yes { background: #ff4d4f; color: white; }
         .btn-no { background: #f0f0f0; color: #333; }
 
@@ -183,12 +200,10 @@
         const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
         let currentData = { notes: [] };
         let pendingDeleteId = null; 
-        let statusTimeout = null; // 状态条计时器
+        let statusTimeout = null; 
 
         // 1. 初始化
         async function loadData() {
-            // 初始化时不显示“准备就绪”，或者仅显示正在加载
-            // updateStatus('正在翻开笔记本...'); 
             const localCache = localStorage.getItem('my_notes_cache_v2'); 
             if (localCache) {
                 currentData = JSON.parse(localCache);
@@ -204,7 +219,7 @@
                 currentData = result.record;
                 localStorage.setItem('my_notes_cache_v2', JSON.stringify(currentData));
                 render();
-                updateStatus('同步完成 ✨'); // 只在成功时提示一下
+                updateStatus('同步完成 ✨'); 
             } catch (error) {
                 console.error(error);
                 if (!localCache) updateStatus('❌ 笔记本打不开');
@@ -370,23 +385,14 @@
 
         function handleEnter(e) { if (e.key === 'Enter') addNote(); }
 
-        // ==========================================
-        // 👇 升级后的状态更新函数 👇
-        // ==========================================
         function updateStatus(msg) {
             const el = document.getElementById('statusMsg');
             el.textContent = msg;
             el.classList.add('show');
-
-            // 1. 如果之前有倒计时，先清除，防止旧的计时器提前关闭新的消息
-            if (statusTimeout) {
-                clearTimeout(statusTimeout);
-            }
-
-            // 2. 设置新的 1秒 倒计时
+            if (statusTimeout) clearTimeout(statusTimeout);
             statusTimeout = setTimeout(() => {
                 el.classList.remove('show');
-            }, 1000); // 1000毫秒 = 1秒
+            }, 1000);
         }
 
         loadData();

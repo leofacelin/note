@@ -22,7 +22,7 @@
         .input-group { 
             background: #fff; padding: 15px; border-radius: 8px; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; 
+            display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; /* margin加大一点，防止第一条笔记的按钮被挡住 */
             border: 1px solid #ddd;
         }
         #inputBox { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; }
@@ -32,63 +32,76 @@
         button:disabled { background: #ccc; }
 
         /* --- 2. 笔记列表容器 --- */
-        ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 15px; }
+        ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 20px; /* gap加大，给外部按钮留空间 */ }
 
         /* --- 3. 笔记卡片样式 --- */
         li { 
-            position: relative; /* 关键：为了让删除按钮绝对定位 */
+            position: relative; /* 关键：定位基准 */
             background-color: #feff9c; 
-            padding: 15px 20px; /* 恢复内边距 */
+            padding: 15px 20px; 
             box-shadow: 2px 2px 5px rgba(0,0,0,0.1); 
             transform: rotate(-0.5deg);
             transition: transform 0.2s, box-shadow 0.2s;
             border-radius: 2px;
+            /* ⚠️ 千万不能加 overflow: hidden，否则外面的按钮会被切掉 */
         }
 
         /* 悬停/点击时的效果 */
         li:hover {
             transform: scale(1.01) rotate(0deg);
             z-index: 10;
-            box-shadow: 4px 4px 10px rgba(0,0,0,0.15);
+            box-shadow: 4px 4px 12px rgba(0,0,0,0.15);
         }
 
-        /* --- 4. 悬浮删除按钮 (核心修改) --- */
+        /* --- 4. 悬浮删除按钮 (移到外部) --- */
         .delete-btn-floating {
             position: absolute;
-            top: 5px;
-            right: 5px;
-            width: 30px;
-            height: 30px;
-            line-height: 30px;
+            /* 核心修改：负值坐标，让它“出界” */
+            top: -12px;
+            right: -12px;
+            
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
             text-align: center;
-            background: rgba(255, 255, 255, 0.6); /* 半透明白色背景，防看不清 */
+            
+            /* 样式优化：纯白背景+阴影，像一个贴纸/图钉 */
+            background: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            
             border-radius: 50%;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
+            color: #555;
             
             /* 默认隐藏 */
             opacity: 0; 
-            transition: opacity 0.2s;
+            transform: scale(0.8); /* 没出现时稍微缩小 */
+            transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28); /* 弹跳动画 */
             z-index: 20;
         }
 
         /* 电脑端hover，移动端点击note时，显示按钮 */
         li:hover .delete-btn-floating {
             opacity: 1;
+            transform: scale(1); /* 出现时恢复大小 */
         }
 
         /* 按钮本身的 hover 效果 */
         .delete-btn-floating:hover {
             background: #ff4d4f;
             color: white;
+            border-color: #ff4d4f;
+            transform: scale(1.1); /* 鼠标放上去再大一点 */
         }
 
         /* 内容样式 */
         .note-header { display: flex; flex-direction: column; width: 100%; }
-        .note-text { font-size: 18px; font-weight: 500; word-break: break-all; margin-right: 20px; /* 右边留点空给按钮 */ }
+        .note-text { font-size: 18px; font-weight: 500; word-break: break-all; }
         .note-time { display: block; font-size: 12px; color: #887b4e; margin-top: 5px; font-style: italic; }
 
-        /* 图片样式 (保持比例修复) */
+        /* 图片样式 */
         .note-img { 
             max-height: 150px; 
             width: auto; max-width: 100%;
@@ -103,7 +116,7 @@
         /* --- 5. 弹窗样式 --- */
         #confirmModal {
             display: none; 
-            position: fixed; /* 始终居中 */
+            position: fixed; 
             top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white;
             border: 1px solid #ccc; 
@@ -111,7 +124,6 @@
             padding: 20px; border-radius: 8px; z-index: 2000; 
             min-width: 200px; text-align: center;
         }
-        /* 遮罩层 (可选，为了让弹窗更明显) */
         #modalOverlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.3); z-index: 1999;
@@ -152,7 +164,7 @@
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$Nk.7e1B.alPcFrs75QBo5.NE80f09zyL8lYQBrPP6.o2pU7zbuEkC';
         const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be'; 
-
+  
         // ==========================================
 
         const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -254,7 +266,7 @@
             }
         }
 
-        // 5. 渲染列表 (回归极简版)
+        // 5. 渲染列表
         function render() {
             const listEl = document.getElementById('list');
             listEl.innerHTML = ''; 
@@ -264,11 +276,15 @@
             sortedNotes.forEach((item) => {
                 const li = document.createElement('li');
                 
-                // 1. 浮动删除按钮 (新)
+                // 1. 浮动删除按钮 (外部版)
                 const delBtn = document.createElement('div');
                 delBtn.className = 'delete-btn-floating';
-                delBtn.textContent = '🗑️';
-                // 阻止冒泡：防止点击按钮时又触发了 li 的 hover/click 逻辑（如果有的话）
+                delBtn.textContent = '🗑️'; 
+                // 或者用更简单的字符 'x' 或 '×'
+                // delBtn.textContent = '×'; 
+                // delBtn.style.fontSize = '20px';
+                // delBtn.style.lineHeight = '26px';
+
                 delBtn.onclick = (e) => showDeleteModal(e, item.id);
                 li.appendChild(delBtn);
 
@@ -301,11 +317,10 @@
             });
         }
 
-        // 6. 弹窗逻辑 (通用版)
+        // 6. 弹窗逻辑
         function showDeleteModal(event, id) {
-            if(event) event.stopPropagation(); // 阻止事件传给 li
+            if(event) event.stopPropagation();
             pendingDeleteId = id; 
-            
             document.getElementById('modalOverlay').style.display = 'block';
             document.getElementById('confirmModal').style.display = 'block';
         }

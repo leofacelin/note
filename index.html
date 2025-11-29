@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的云端记事本</title> 
     <style>
         /* --- 1. 基础设置 --- */
@@ -16,8 +16,6 @@
             background-image: linear-gradient(#e1e1e1 1px, transparent 1px);
             background-size: 100% 2rem;
             line-height: 1.6;
-            overflow-x: hidden;
-            overscroll-behavior-y: none; 
         }
 
         /* 输入区 */
@@ -36,99 +34,61 @@
         /* --- 2. 笔记列表容器 --- */
         ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 15px; }
 
+        /* --- 3. 笔记卡片样式 --- */
         li { 
-            position: relative; 
-            padding: 0; 
+            position: relative; /* 关键：为了让删除按钮绝对定位 */
+            background-color: #feff9c; 
+            padding: 15px 20px; /* 恢复内边距 */
             box-shadow: 2px 2px 5px rgba(0,0,0,0.1); 
             transform: rotate(-0.5deg);
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
             border-radius: 2px;
-            overflow: hidden; 
-            background-color: #feff9c; 
         }
 
+        /* 悬停/点击时的效果 */
         li:hover {
             transform: scale(1.01) rotate(0deg);
             z-index: 10;
             box-shadow: 4px 4px 10px rgba(0,0,0,0.15);
         }
 
-        /* 滑动轨道 */
-        .swipe-scroller {
-            display: flex;
-            width: 100%;
-            overflow-x: hidden; /* PC端禁止滚动 */
-            scroll-behavior: smooth;
-            position: relative; /* 建立层级上下文 */
-        }
-
-        /* 上层内容盖子 */
-        .swipe-content {
-            flex: 0 0 100%; 
-            padding: 15px 20px;
-            box-sizing: border-box;
-            background-color: #feff9c; 
-            position: relative;
-            z-index: 2; 
-        }
-
-        /* 占位块 (透明删除按钮) */
-        .swipe-spacer {
-            flex: 0 0 80px; 
-            /* 关键修复：加一点点背景色确保能被点击，肉眼看不见 */
-            background: rgba(0,0,0,0.001); 
-            cursor: pointer;
-            display: none; 
-            /* 关键修复：提高层级，确保在最上层 */
-            position: relative;
-            z-index: 10; 
-        }
-
-        /* 底层的删除背景 (红色) */
-        .mobile-delete-bg {
+        /* --- 4. 悬浮删除按钮 (核心修改) --- */
+        .delete-btn-floating {
             position: absolute;
-            top: 0; right: 0; bottom: 0;
-            width: 80px; 
-            background-color: #ff4d4f; 
-            display: flex;
-            align-items: center; justify-content: center;
-            color: white; font-weight: bold;
-            z-index: 0; 
-            display: none; 
+            top: 5px;
+            right: 5px;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.6); /* 半透明白色背景，防看不清 */
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            
+            /* 默认隐藏 */
+            opacity: 0; 
+            transition: opacity 0.2s;
+            z-index: 20;
         }
 
-        /* === 📱 移动端专属 === */
-        @media (pointer: coarse) {
-            .swipe-scroller {
-                overflow-x: auto; 
-                scroll-snap-type: x mandatory; 
-                scrollbar-width: none;
-                overscroll-behavior-x: none; 
-            }
-            .swipe-scroller::-webkit-scrollbar { display: none; }
-
-            .swipe-content { scroll-snap-align: start; }
-            .swipe-spacer { 
-                display: block; 
-                scroll-snap-align: end; 
-            }
-
-            .mobile-delete-bg { display: flex; }
-            li { background-color: #ff4d4f; }
-            .delete-btn-desktop { display: none !important; }
+        /* 电脑端hover，移动端点击note时，显示按钮 */
+        li:hover .delete-btn-floating {
+            opacity: 1;
         }
 
-        /* --- 4. 电脑端样式 --- */
-        .note-header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
-        .note-text { font-size: 18px; font-weight: 500; word-break: break-all; }
+        /* 按钮本身的 hover 效果 */
+        .delete-btn-floating:hover {
+            background: #ff4d4f;
+            color: white;
+        }
+
+        /* 内容样式 */
+        .note-header { display: flex; flex-direction: column; width: 100%; }
+        .note-text { font-size: 18px; font-weight: 500; word-break: break-all; margin-right: 20px; /* 右边留点空给按钮 */ }
         .note-time { display: block; font-size: 12px; color: #887b4e; margin-top: 5px; font-style: italic; }
 
-        .delete-btn-desktop { 
-            cursor: pointer; font-size: 18px; margin-left: 15px; 
-            opacity: 0; transition: opacity 0.2s;
-        }
-        li:hover .delete-btn-desktop { opacity: 1; }
-
+        /* 图片样式 (保持比例修复) */
         .note-img { 
             max-height: 150px; 
             width: auto; max-width: 100%;
@@ -140,31 +100,27 @@
 
         .status { font-size: 12px; color: #999; text-align: center; margin-top: 10px; background: rgba(255,255,255,0.8); display: inline-block; padding: 2px 10px; border-radius: 10px;}
 
-        /* --- 5. 弹窗样式 (移动端优化) --- */
+        /* --- 5. 弹窗样式 --- */
         #confirmModal {
             display: none; 
-            position: absolute; /* PC默认 */
+            position: fixed; /* 始终居中 */
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white;
-            border: 1px solid #ccc; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            padding: 15px; border-radius: 8px; z-index: 2000; min-width: 160px; text-align: center;
+            border: 1px solid #ccc; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            padding: 20px; border-radius: 8px; z-index: 2000; 
+            min-width: 200px; text-align: center;
         }
-        #confirmModal p { margin: 0 0 15px 0; font-size: 16px; color: #333; }
-        .modal-btn { padding: 6px 15px; font-size: 14px; margin: 0 5px; border-radius: 4px; cursor: pointer; border: none; }
+        /* 遮罩层 (可选，为了让弹窗更明显) */
+        #modalOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.3); z-index: 1999;
+        }
+
+        #confirmModal p { margin: 0 0 20px 0; font-size: 16px; color: #333; }
+        .modal-btn { padding: 8px 20px; font-size: 14px; margin: 0 10px; border-radius: 4px; cursor: pointer; border: none; }
         .btn-yes { background: #ff4d4f; color: white; }
         .btn-no { background: #f0f0f0; color: #333; }
-
-        /* 移动端弹窗强制居中 */
-        @media (pointer: coarse) {
-            #confirmModal {
-                position: fixed !important; /* 强制固定 */
-                top: 50% !important;
-                left: 50% !important;
-                transform: translate(-50%, -50%) !important;
-                box-shadow: 0 0 0 1000px rgba(0,0,0,0.4); /* 背景变暗 */
-                width: 70%;
-                max-width: 300px;
-            }
-        }
 
     </style>
 </head>
@@ -182,6 +138,7 @@
 
     <ul id="list"></ul>
 
+    <div id="modalOverlay" onclick="closeModal()"></div>
     <div id="confirmModal">
         <p>确定把这条笔记撕掉吗？</p>
         <button class="modal-btn btn-yes" onclick="confirmDelete()">撕掉</button>
@@ -195,54 +152,14 @@
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$Nk.7e1B.alPcFrs75QBo5.NE80f09zyL8lYQBrPP6.o2pU7zbuEkC';
         const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be'; 
- 
+
         // ==========================================
 
         const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
         let currentData = { notes: [] };
         let pendingDeleteId = null; 
 
-        // === 🆕 核心升级：优化的防抖逻辑 ===
-        const listContainer = document.getElementById('list');
-        let touchStartX = 0;
-        let touchStartY = 0;
-
-        // 1. 手指按下
-        listContainer.addEventListener('touchstart', function(e) {
-            const scroller = e.target.closest('.swipe-scroller');
-            if (scroller) {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-            }
-        }, { passive: false });
-
-        // 2. 手指移动 (加入死区判断，防止误杀点击)
-        listContainer.addEventListener('touchmove', function(e) {
-            const scroller = e.target.closest('.swipe-scroller');
-            if (!scroller) return;
-
-            const touchCurrentX = e.touches[0].clientX;
-            const touchCurrentY = e.touches[0].clientY;
-            
-            const diffX = touchCurrentX - touchStartX;
-            const diffY = touchCurrentY - touchStartY;
-
-            // 死区判断：只有移动超过 5px 才算是滑动，防止点击时的微颤触发拦截
-            if (Math.abs(diffX) < 5 && Math.abs(diffY) < 5) {
-                return; // 是点击，放行
-            }
-
-            // 如果是横向滑动
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                // 如果在起点还想往右拉 -> 拦截
-                if (scroller.scrollLeft <= 0 && diffX > 0) {
-                    e.preventDefault();
-                }
-            }
-        }, { passive: false });
-
-        // === 原有逻辑 ===
-
+        // 1. 初始化
         async function loadData() {
             updateStatus('正在翻开笔记本...');
             const localCache = localStorage.getItem('my_notes_cache_v2'); 
@@ -267,6 +184,7 @@
             }
         }
 
+        // 2. 上传图片
         async function uploadImage(file) {
             const formData = new FormData();
             formData.append('image', file);
@@ -281,6 +199,7 @@
             }
         }
 
+        // 3. 添加笔记
         async function addNote() {
             const input = document.getElementById('inputBox');
             const fileInput = document.getElementById('fileInput');
@@ -319,6 +238,7 @@
             btn.disabled = false; btn.textContent = '记下来';
         }
 
+        // 4. 保存
         async function saveData() {
             updateStatus('正在存档...');
             localStorage.setItem('my_notes_cache_v2', JSON.stringify(currentData));
@@ -334,6 +254,7 @@
             }
         }
 
+        // 5. 渲染列表 (回归极简版)
         function render() {
             const listEl = document.getElementById('list');
             listEl.innerHTML = ''; 
@@ -343,87 +264,50 @@
             sortedNotes.forEach((item) => {
                 const li = document.createElement('li');
                 
-                const mobileBg = document.createElement('div');
-                mobileBg.className = 'mobile-delete-bg';
-                mobileBg.textContent = '删除';
-                li.appendChild(mobileBg);
+                // 1. 浮动删除按钮 (新)
+                const delBtn = document.createElement('div');
+                delBtn.className = 'delete-btn-floating';
+                delBtn.textContent = '🗑️';
+                // 阻止冒泡：防止点击按钮时又触发了 li 的 hover/click 逻辑（如果有的话）
+                delBtn.onclick = (e) => showDeleteModal(e, item.id);
+                li.appendChild(delBtn);
 
-                const scroller = document.createElement('div');
-                scroller.className = 'swipe-scroller';
-
-                const content = document.createElement('div');
-                content.className = 'swipe-content';
-
+                // 2. 文本区域
                 const header = document.createElement('div');
                 header.className = 'note-header';
                 
-                const textDiv = document.createElement('div');
                 const span = document.createElement('span');
                 span.className = 'note-text';
                 span.textContent = item.text || '';
+                
                 const timeSpan = document.createElement('span');
                 timeSpan.className = 'note-time';
                 timeSpan.textContent = item.date || '';
-                textDiv.appendChild(span);
-                textDiv.appendChild(timeSpan);
+                
+                header.appendChild(span);
+                header.appendChild(timeSpan);
+                li.appendChild(header);
 
-                const desktopDel = document.createElement('span');
-                desktopDel.className = 'delete-btn-desktop';
-                desktopDel.textContent = '🗑️'; 
-                desktopDel.onclick = (e) => showDeleteModal(e, item.id);
-
-                header.appendChild(textDiv);
-                header.appendChild(desktopDel);
-                content.appendChild(header);
-
+                // 3. 图片区域
                 if (item.img) {
                     const img = document.createElement('img');
                     img.src = item.img;
                     img.className = 'note-img';
                     img.onclick = () => window.open(item.img, '_blank');
-                    content.appendChild(img);
+                    li.appendChild(img);
                 }
-
-                // 创建透明占位块
-                const spacer = document.createElement('div');
-                spacer.className = 'swipe-spacer';
-                
-                // 关键修复：直接绑定 click，配合 CSS z-index 确保触发
-                spacer.addEventListener('click', function(e) {
-                    showDeleteModal(e, item.id, true);
-                });
-
-                scroller.appendChild(content);
-                scroller.appendChild(spacer);
-                li.appendChild(scroller);
 
                 listEl.appendChild(li);
             });
         }
 
-        // 弹窗逻辑
-        function showDeleteModal(event, id, isMobileAction = false) {
-            event.stopPropagation(); 
+        // 6. 弹窗逻辑 (通用版)
+        function showDeleteModal(event, id) {
+            if(event) event.stopPropagation(); // 阻止事件传给 li
             pendingDeleteId = id; 
             
-            const modal = document.getElementById('confirmModal');
-            
-            // 移动端：样式里已经设置了 fixed + center，不需要 JS 计算坐标
-            // PC端：继续使用跟随鼠标
-            if (!isMobileAction) {
-                modal.style.position = 'absolute';
-                modal.style.top = (event.pageY + 10) + 'px';
-                modal.style.left = (event.pageX - 80) + 'px';
-                modal.style.transform = 'none';
-            } else {
-                // 移动端重置为 fixed 样式（CSS media query 会生效）
-                modal.style.position = ''; 
-                modal.style.top = '';
-                modal.style.left = '';
-                modal.style.transform = '';
-            }
-            
-            modal.style.display = 'block';
+            document.getElementById('modalOverlay').style.display = 'block';
+            document.getElementById('confirmModal').style.display = 'block';
         }
 
         async function confirmDelete() {
@@ -438,18 +322,10 @@
         }
 
         function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
             document.getElementById('confirmModal').style.display = 'none';
             pendingDeleteId = null;
         }
-
-        document.addEventListener('click', function(event) {
-            const modal = document.getElementById('confirmModal');
-            if (!event.target.classList.contains('delete-btn-desktop') && 
-                !event.target.classList.contains('swipe-spacer') &&
-                !modal.contains(event.target)) {
-                closeModal();
-            }
-        });
 
         function handleEnter(e) { if (e.key === 'Enter') addNote(); }
         function updateStatus(msg) { document.getElementById('statusMsg').textContent = msg; }

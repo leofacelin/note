@@ -3,22 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的云端记事本</title> <style>
-        /* --- 1. 整体底色：模拟横线记事本 --- */
+    <title>我的云端记事本</title> 
+    <style>
+        /* --- 1. 基础样式 (保持不变) --- */
         body {
-            font-family: "Comic Sans MS", "Chalkboard SE", sans-serif; /* 手写风格字体 */
+            font-family: "Comic Sans MS", "Chalkboard SE", sans-serif;
             max-width: 700px;
             margin: 0 auto;
-            /* 调整顶部内边距，因为去掉了H1，稍微留点呼吸感 */
             padding: 3rem 1rem 2rem 1rem; 
             color: #333;
-            background-color: #fdfbf7; /* 米色纸张底色 */
+            background-color: #fdfbf7;
             background-image: linear-gradient(#e1e1e1 1px, transparent 1px);
-            background-size: 100% 2rem; /* 行高 */
+            background-size: 100% 2rem;
             line-height: 1.6;
+            overflow-x: hidden; /* 防止整体页面横向抖动 */
         }
 
-        /* 输入区样式 */
+        /* 输入区 */
         .input-group { 
             background: #fff; 
             padding: 15px; 
@@ -33,76 +34,112 @@
         button:hover { background: #555; }
         button:disabled { background: #ccc; }
 
-        /* --- 2. 笔记卡片：模拟 Post-it 便利贴 --- */
+        /* --- 2. 笔记卡片容器 (架构调整) --- */
         ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 15px; }
+        
         li { 
-            background-color: #feff9c; /* Post-it 经典黄 */
-            padding: 15px 20px; 
+            background-color: #feff9c; /* 黄色便利贴 */
+            /* padding: 15px 20px;  <-- 注意：padding 移到了内部 content 里 */
+            padding: 0; /* 必须清零，否则滑动条会被挤进去 */
             box-shadow: 2px 2px 5px rgba(0,0,0,0.1); 
-            /* 稍微旋转一点点，显得随意 */
             transform: rotate(-0.5deg);
             transition: transform 0.2s;
             position: relative; 
+            overflow: hidden; /* 关键：隐藏圆角外的红色按钮 */
+            border-radius: 2px; /* 给一点点圆角 */
         }
         li:hover {
-            transform: scale(1.01) rotate(0deg); /* 悬停时放大摆正 */
+            transform: scale(1.01) rotate(0deg);
             z-index: 10;
             box-shadow: 4px 4px 10px rgba(0,0,0,0.15);
         }
 
+        /* === 🆕 CSS Scroll Snap 滑动核心 === */
+        .swipe-scroller {
+            display: flex;
+            width: 100%;
+            overflow-x: hidden; /* 默认（电脑端）禁止滚动 */
+            scroll-behavior: smooth;
+        }
+
+        /* 笔记内容层 */
+        .swipe-content {
+            flex: 0 0 100%; /* 宽度强制 100% */
+            padding: 15px 20px; /* Padding 搬家到这里 */
+            box-sizing: border-box;
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px;
+        }
+
+        /* 滑动出来的红色删除按钮 */
+        .swipe-action {
+            flex: 0 0 80px; /* 按钮宽度 80px */
+            background-color: #ff4d4f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            display: none; /* 默认（电脑端）隐藏，防止布局干扰 */
+        }
+
+        /* === 📱 移动端专属样式 (Touch Devices) === */
+        @media (pointer: coarse) {
+            /* 1. 开启滚动捕捉 */
+            .swipe-scroller {
+                overflow-x: auto; /* 允许横向滚动 */
+                scroll-snap-type: x mandatory; /* 强制捕捉 */
+                scrollbar-width: none; /* Firefox 隐藏滚动条 */
+            }
+            .swipe-scroller::-webkit-scrollbar { display: none; /* Chrome/Safari 隐藏滚动条 */ }
+
+            /* 2. 定义捕捉点 */
+            .swipe-content { scroll-snap-align: start; } /* 停在内容起始处 */
+            .swipe-action { 
+                display: flex; /* 手机端显示这个按钮 */
+                scroll-snap-align: end; /* 停在按钮结束处 */
+            }
+
+            /* 3. 隐藏原本的悬停垃圾桶 (手机没 hover) */
+            .delete-btn-desktop { display: none !important; }
+        }
+
+        /* === 💻 电脑端专属样式 === */
         .note-header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
         .note-text { font-size: 18px; font-weight: 500; word-break: break-all; }
         
-        /* 时间戳样式 */
         .note-time {
-            display: block;
-            font-size: 12px;
-            color: #887b4e; /* 深黄色文字 */
-            margin-top: 5px;
-            font-style: italic;
+            display: block; font-size: 12px; color: #887b4e; margin-top: 5px; font-style: italic;
         }
 
-        /* --- 3. 删除按钮：悬停显示 --- */
-        .delete-btn { 
-            cursor: pointer; 
-            font-size: 18px; 
-            margin-left: 15px; 
-            opacity: 0; /* 默认隐藏 */
-            transition: opacity 0.2s;
+        /* 原来的垃圾桶图标 (仅用于电脑端) */
+        .delete-btn-desktop { 
+            cursor: pointer; font-size: 18px; margin-left: 15px; 
+            opacity: 0; transition: opacity 0.2s;
         }
-        li:hover .delete-btn { opacity: 1; /* 悬停显示 */ }
+        li:hover .delete-btn-desktop { opacity: 1; }
 
-        /* --- 4. 图片样式：缩小尺寸 --- */
+        /* 图片样式 */
         .note-img { 
-            max-height: 150px; /* 限制最大高度 */
-            max-width: 100%;
-            border-radius: 4px; 
-            display: block; 
-            margin-top: 10px; 
-            border: 4px solid #fff; /* 照片白边效果 */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 150px; max-width: 100%; border-radius: 4px; 
+            display: block; margin-top: 5px; 
+            border: 4px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             cursor: zoom-in;
         }
 
         .status { font-size: 12px; color: #999; text-align: center; margin-top: 10px; background: rgba(255,255,255,0.8); display: inline-block; padding: 2px 10px; border-radius: 10px;}
 
-        /* --- 5. 自定义删除确认弹窗 --- */
+        /* 弹窗样式 */
         #confirmModal {
-            display: none;
-            position: absolute;
-            background: white;
-            border: 1px solid #ccc;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            padding: 10px;
-            border-radius: 6px;
-            z-index: 1000;
-            min-width: 150px;
-            text-align: center;
+            display: none; position: absolute; background: white;
+            border: 1px solid #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            padding: 10px; border-radius: 6px; z-index: 1000; min-width: 150px; text-align: center;
         }
         #confirmModal p { margin: 0 0 10px 0; font-size: 14px; }
-        .modal-btn { 
-            padding: 4px 10px; font-size: 12px; margin: 0 5px; border-radius: 3px; cursor: pointer; border: none; 
-        }
+        .modal-btn { padding: 4px 10px; font-size: 12px; margin: 0 5px; border-radius: 3px; cursor: pointer; border: none; }
         .btn-yes { background: #ff4d4f; color: white; }
         .btn-no { background: #eee; color: #333; }
 
@@ -130,19 +167,19 @@
 
     <script>
         // ==========================================
-        // 👇 记得重新填这里！👇
+        // 👇 记得填 Key 👇
         // ==========================================
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$Nk.7e1B.alPcFrs75QBo5.NE80f09zyL8lYQBrPP6.o2pU7zbuEkC';
         const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be'; 
- 
+  
         // ==========================================
 
         const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
         let currentData = { notes: [] };
         let pendingDeleteId = null; 
 
-        // 1. 初始化加载
+        // 1. 初始化
         async function loadData() {
             updateStatus('正在翻开笔记本...');
             const localCache = localStorage.getItem('my_notes_cache_v2'); 
@@ -150,7 +187,6 @@
                 currentData = JSON.parse(localCache);
                 render(); 
             }
-
             try {
                 const response = await fetch(URL, {
                     method: 'GET',
@@ -164,7 +200,7 @@
                 updateStatus('✅ 同步完成');
             } catch (error) {
                 console.error(error);
-                if (!localCache) updateStatus('❌ 笔记本打不开 (检查网络/Key)');
+                if (!localCache) updateStatus('❌ 笔记本打不开');
             }
         }
 
@@ -179,8 +215,7 @@
                 const data = await res.json();
                 return data.success ? data.data.url : null;
             } catch (e) {
-                alert('图片上传失败');
-                return null;
+                alert('图片上传失败'); return null;
             }
         }
 
@@ -194,9 +229,7 @@
 
             if (!text && !file) return;
 
-            btn.disabled = true;
-            btn.textContent = '记录中...';
-            updateStatus('正在记录...');
+            btn.disabled = true; btn.textContent = '记录中...'; updateStatus('正在记录...');
 
             let imgUrl = null;
             if (file) {
@@ -205,7 +238,6 @@
                 if (!imgUrl) { btn.disabled = false; btn.textContent = '记下来'; return; }
             }
 
-            // 获取东八区时间
             const now = new Date();
             const timeString = now.toLocaleString('zh-CN', {
                 timeZone: 'Asia/Shanghai',
@@ -221,14 +253,9 @@
                 date: timeString 
             });
 
-            input.value = '';
-            fileInput.value = '';
-            
-            render();
-            await saveData();
-            
-            btn.disabled = false;
-            btn.textContent = '记下来';
+            input.value = ''; fileInput.value = '';
+            render(); await saveData();
+            btn.disabled = false; btn.textContent = '记下来';
         }
 
         // 4. 保存
@@ -243,11 +270,11 @@
                 });
                 updateStatus('✅ 已存档');
             } catch (error) {
-                updateStatus('⚠️ 存档失败 (网络)');
+                updateStatus('⚠️ 存档失败');
             }
         }
 
-        // 5. 渲染列表
+        // 5. 渲染列表 (核心修改：支持滑动结构)
         function render() {
             const listEl = document.getElementById('list');
             listEl.innerHTML = ''; 
@@ -257,52 +284,87 @@
             sortedNotes.forEach((item) => {
                 const li = document.createElement('li');
                 
+                // === 🆕 核心结构变动 ===
+                // 创建滑轨容器
+                const scroller = document.createElement('div');
+                scroller.className = 'swipe-scroller';
+
+                // --- A. 内容层 (100%宽) ---
+                const content = document.createElement('div');
+                content.className = 'swipe-content';
+
+                // 1. 顶部：文本 + 电脑端垃圾桶
                 const header = document.createElement('div');
                 header.className = 'note-header';
                 
-                const contentDiv = document.createElement('div');
+                const textDiv = document.createElement('div');
                 const span = document.createElement('span');
                 span.className = 'note-text';
                 span.textContent = item.text || '';
-                
                 const timeSpan = document.createElement('span');
                 timeSpan.className = 'note-time';
-                timeSpan.textContent = item.date ? item.date : ''; 
-                
-                contentDiv.appendChild(span);
-                contentDiv.appendChild(timeSpan);
+                timeSpan.textContent = item.date || '';
+                textDiv.appendChild(span);
+                textDiv.appendChild(timeSpan);
 
-                const delBtn = document.createElement('span');
-                delBtn.className = 'delete-btn';
-                delBtn.textContent = '🗑️'; 
-                delBtn.onclick = (e) => showDeleteModal(e, item.id);
+                // 电脑端专属垃圾桶 (Emoji)
+                const desktopDel = document.createElement('span');
+                desktopDel.className = 'delete-btn-desktop';
+                desktopDel.textContent = '🗑️'; 
+                desktopDel.onclick = (e) => showDeleteModal(e, item.id);
 
-                header.appendChild(contentDiv);
-                header.appendChild(delBtn);
-                li.appendChild(header);
+                header.appendChild(textDiv);
+                header.appendChild(desktopDel);
+                content.appendChild(header);
 
+                // 2. 图片
                 if (item.img) {
                     const img = document.createElement('img');
                     img.src = item.img;
                     img.className = 'note-img';
                     img.onclick = () => window.open(item.img, '_blank');
-                    li.appendChild(img);
+                    content.appendChild(img);
                 }
+
+                // --- B. 动作层 (手机滑动显示) ---
+                const action = document.createElement('div');
+                action.className = 'swipe-action';
+                action.textContent = '删除';
+                // 手机点击“删除”也触发同样的弹窗，但位置我们会特殊处理
+                action.onclick = (e) => showDeleteModal(e, item.id, true);
+
+                // 组装三明治
+                scroller.appendChild(content);
+                scroller.appendChild(action);
+                li.appendChild(scroller);
 
                 listEl.appendChild(li);
             });
         }
 
-        // 6. 浮动删除弹窗逻辑
-        function showDeleteModal(event, id) {
+        // 6. 删除确认逻辑
+        // isMobileAction: 标记是否来自手机滑动按钮
+        function showDeleteModal(event, id, isMobileAction = false) {
             event.stopPropagation(); 
             pendingDeleteId = id; 
             
             const modal = document.getElementById('confirmModal');
-            let top = event.pageY + 10;
-            let left = event.pageX - 80; 
-            modal.style.top = top + 'px';
-            modal.style.left = left + 'px';
+            
+            if (isMobileAction) {
+                // 📱 手机端：直接显示在屏幕中央 (因为滑动后手的位置不固定)
+                // 简单的居中策略，利用 CSS fixed 可能更好，这里用绝对定位模拟
+                // 获取当前 li 的位置，或者直接显示在点击处
+                // 为了简单，我们让它出现在点击位置左侧一点
+                modal.style.top = (event.pageY - 50) + 'px';
+                modal.style.left = '50%'; // 居中
+                modal.style.transform = 'translateX(-50%)'; // 居中修正
+            } else {
+                // 💻 电脑端：跟随鼠标
+                modal.style.transform = 'none';
+                modal.style.top = (event.pageY + 10) + 'px';
+                modal.style.left = (event.pageX - 80) + 'px';
+            }
+            
             modal.style.display = 'block';
         }
 
@@ -324,18 +386,16 @@
 
         document.addEventListener('click', function(event) {
             const modal = document.getElementById('confirmModal');
-            if (!event.target.classList.contains('delete-btn') && !modal.contains(event.target)) {
+            // 如果点的是“动作层”里的元素，也不关闭
+            if (!event.target.classList.contains('delete-btn-desktop') && 
+                !event.target.classList.contains('swipe-action') &&
+                !modal.contains(event.target)) {
                 closeModal();
             }
         });
 
-        function handleEnter(e) {
-            if (e.key === 'Enter') addNote();
-        }
-
-        function updateStatus(msg) {
-            document.getElementById('statusMsg').textContent = msg;
-        }
+        function handleEnter(e) { if (e.key === 'Enter') addNote(); }
+        function updateStatus(msg) { document.getElementById('statusMsg').textContent = msg; }
 
         loadData();
     </script>

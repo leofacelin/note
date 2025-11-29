@@ -36,8 +36,6 @@
         /* --- 2. 笔记列表容器 --- */
         ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 15px; }
 
-        /* --- 3. 核心交互样式 --- */
-        
         li { 
             position: relative; 
             padding: 0; 
@@ -61,6 +59,7 @@
             width: 100%;
             overflow-x: hidden; /* PC端禁止滚动 */
             scroll-behavior: smooth;
+            position: relative; /* 建立层级上下文 */
         }
 
         /* 上层内容盖子 */
@@ -73,15 +72,19 @@
             z-index: 2; 
         }
 
-        /* 占位块 (透明) */
+        /* 占位块 (透明删除按钮) */
         .swipe-spacer {
             flex: 0 0 80px; 
-            background: transparent; 
+            /* 关键修复：加一点点背景色确保能被点击，肉眼看不见 */
+            background: rgba(0,0,0,0.001); 
             cursor: pointer;
             display: none; 
+            /* 关键修复：提高层级，确保在最上层 */
+            position: relative;
+            z-index: 10; 
         }
 
-        /* 底层的删除图标 */
+        /* 底层的删除背景 (红色) */
         .mobile-delete-bg {
             position: absolute;
             top: 0; right: 0; bottom: 0;
@@ -100,7 +103,6 @@
                 overflow-x: auto; 
                 scroll-snap-type: x mandatory; 
                 scrollbar-width: none;
-                /* 尽可能用 CSS 禁止回弹，JS 作为双重保险 */
                 overscroll-behavior-x: none; 
             }
             .swipe-scroller::-webkit-scrollbar { display: none; }
@@ -138,15 +140,31 @@
 
         .status { font-size: 12px; color: #999; text-align: center; margin-top: 10px; background: rgba(255,255,255,0.8); display: inline-block; padding: 2px 10px; border-radius: 10px;}
 
+        /* --- 5. 弹窗样式 (移动端优化) --- */
         #confirmModal {
-            display: none; position: absolute; background: white;
-            border: 1px solid #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            padding: 10px; border-radius: 6px; z-index: 1000; min-width: 150px; text-align: center;
+            display: none; 
+            position: absolute; /* PC默认 */
+            background: white;
+            border: 1px solid #ccc; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            padding: 15px; border-radius: 8px; z-index: 2000; min-width: 160px; text-align: center;
         }
-        #confirmModal p { margin: 0 0 10px 0; font-size: 14px; }
-        .modal-btn { padding: 4px 10px; font-size: 12px; margin: 0 5px; border-radius: 3px; cursor: pointer; border: none; }
+        #confirmModal p { margin: 0 0 15px 0; font-size: 16px; color: #333; }
+        .modal-btn { padding: 6px 15px; font-size: 14px; margin: 0 5px; border-radius: 4px; cursor: pointer; border: none; }
         .btn-yes { background: #ff4d4f; color: white; }
-        .btn-no { background: #eee; color: #333; }
+        .btn-no { background: #f0f0f0; color: #333; }
+
+        /* 移动端弹窗强制居中 */
+        @media (pointer: coarse) {
+            #confirmModal {
+                position: fixed !important; /* 强制固定 */
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                box-shadow: 0 0 0 1000px rgba(0,0,0,0.4); /* 背景变暗 */
+                width: 70%;
+                max-width: 300px;
+            }
+        }
 
     </style>
 </head>
@@ -177,21 +195,20 @@
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$Nk.7e1B.alPcFrs75QBo5.NE80f09zyL8lYQBrPP6.o2pU7zbuEkC';
         const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be'; 
-  
+ 
         // ==========================================
 
         const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
         let currentData = { notes: [] };
         let pendingDeleteId = null; 
 
-        // === 🆕 核心升级：JS 手动拦截右滑 ===
+        // === 🆕 核心升级：优化的防抖逻辑 ===
         const listContainer = document.getElementById('list');
         let touchStartX = 0;
         let touchStartY = 0;
 
-        // 1. 手指按下：记录初始坐标
+        // 1. 手指按下
         listContainer.addEventListener('touchstart', function(e) {
-            // 找到当前滑动的那个轨道
             const scroller = e.target.closest('.swipe-scroller');
             if (scroller) {
                 touchStartX = e.touches[0].clientX;
@@ -199,7 +216,7 @@
             }
         }, { passive: false });
 
-        // 2. 手指移动：判断方向并拦截
+        // 2. 手指移动 (加入死区判断，防止误杀点击)
         listContainer.addEventListener('touchmove', function(e) {
             const scroller = e.target.closest('.swipe-scroller');
             if (!scroller) return;
@@ -210,14 +227,15 @@
             const diffX = touchCurrentX - touchStartX;
             const diffY = touchCurrentY - touchStartY;
 
-            // 判断是否主要是横向滑动 (X移动 > Y移动)
+            // 死区判断：只有移动超过 5px 才算是滑动，防止点击时的微颤触发拦截
+            if (Math.abs(diffX) < 5 && Math.abs(diffY) < 5) {
+                return; // 是点击，放行
+            }
+
+            // 如果是横向滑动
             if (Math.abs(diffX) > Math.abs(diffY)) {
-                
-                // 关键逻辑：
-                // 如果当前处于初始位置 (scrollLeft <= 0)
-                // 并且手指正在向右滑 (diffX > 0)
+                // 如果在起点还想往右拉 -> 拦截
                 if (scroller.scrollLeft <= 0 && diffX > 0) {
-                    // ⛔️ 阻止默认行为（即阻止橡皮筋回弹）
                     e.preventDefault();
                 }
             }
@@ -366,9 +384,14 @@
                     content.appendChild(img);
                 }
 
+                // 创建透明占位块
                 const spacer = document.createElement('div');
                 spacer.className = 'swipe-spacer';
-                spacer.onclick = (e) => showDeleteModal(e, item.id, true);
+                
+                // 关键修复：直接绑定 click，配合 CSS z-index 确保触发
+                spacer.addEventListener('click', function(e) {
+                    showDeleteModal(e, item.id, true);
+                });
 
                 scroller.appendChild(content);
                 scroller.appendChild(spacer);
@@ -378,20 +401,26 @@
             });
         }
 
+        // 弹窗逻辑
         function showDeleteModal(event, id, isMobileAction = false) {
             event.stopPropagation(); 
             pendingDeleteId = id; 
             
             const modal = document.getElementById('confirmModal');
             
-            if (isMobileAction) {
-                modal.style.top = (event.pageY - 50) + 'px';
-                modal.style.left = '50%'; 
-                modal.style.transform = 'translateX(-50%)';
-            } else {
-                modal.style.transform = 'none';
+            // 移动端：样式里已经设置了 fixed + center，不需要 JS 计算坐标
+            // PC端：继续使用跟随鼠标
+            if (!isMobileAction) {
+                modal.style.position = 'absolute';
                 modal.style.top = (event.pageY + 10) + 'px';
                 modal.style.left = (event.pageX - 80) + 'px';
+                modal.style.transform = 'none';
+            } else {
+                // 移动端重置为 fixed 样式（CSS media query 会生效）
+                modal.style.position = ''; 
+                modal.style.top = '';
+                modal.style.left = '';
+                modal.style.transform = '';
             }
             
             modal.style.display = 'block';

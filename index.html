@@ -17,14 +17,14 @@
             font-family: "Comic Sans MS", "Chalkboard SE", sans-serif;
             max-width: 700px;
             margin: 0 auto;
-            padding: 3rem 1rem 4rem 1rem; 
+            /* 顶部留出一点空间给浮动提示，虽然是悬浮的，但避免视觉太挤 */
+            padding: 2rem 1rem 4rem 1rem; 
             color: #333;
             background-color: #fdfbf7;
             background-image: linear-gradient(#e1e1e1 1px, transparent 1px);
             background-size: 100% 2rem;
             line-height: 1.6;
             overscroll-behavior-y: none; 
-            /* 关键：让移动端点击背景能快速响应 */
             cursor: pointer; 
             -webkit-tap-highlight-color: transparent;
         }
@@ -34,7 +34,7 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; 
             border: 1px solid #ddd;
-            cursor: default; /* 输入区恢复默认鼠标 */
+            cursor: default; 
         }
         #inputBox { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 200px; }
         #fileInput { padding: 10px; font-size: 12px; }
@@ -53,14 +53,10 @@
             transform: rotate(-0.5deg);
             transition: transform 0.2s, box-shadow 0.2s;
             border-radius: 2px;
-            
-            /* 关键修复 1：让 iOS 认为这是可点击的，从而触发交互 */
             cursor: pointer; 
-            /* 去掉移动端点击时蓝色的高亮块，体验更像App */
             -webkit-tap-highlight-color: transparent; 
         }
 
-        /* 鼠标悬停(PC) 或 激活状态(Mobile) */
         li:hover, li.active {
             transform: scale(1.01) rotate(0deg);
             z-index: 10;
@@ -70,40 +66,25 @@
         /* --- 3. 悬浮删除按钮 --- */
         .delete-btn-floating {
             position: absolute;
-            top: -12px;
-            right: -12px;
+            top: -12px; right: -12px;
             width: 28px; height: 28px;
             line-height: 28px; text-align: center;
-            background: #fff;
-            border: 1px solid #ddd;
+            background: #fff; border: 1px solid #ddd;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border-radius: 50%;
             cursor: pointer;
             font-size: 14px; color: #555;
-            
             opacity: 0; 
-            /* 关键修复 2：translateZ(0) 强制开启 GPU 加速，解决 Safari 渲染层级 bug */
             transform: scale(0.8) translateZ(0); 
             transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
             z-index: 20;
-            
-            /* 防止按钮上的点击穿透到 li */
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* 关键修复 3：不仅 hover 显示，拥有 .active 类时也显示 */
         @media (hover: hover) {
-            li:hover .delete-btn-floating {
-                opacity: 1;
-                transform: scale(1) translateZ(0);
-            }
+            li:hover .delete-btn-floating { opacity: 1; transform: scale(1) translateZ(0); }
         }
-        
-        /* 移动端/JS激活状态 */
-        li.active .delete-btn-floating {
-            opacity: 1;
-            transform: scale(1) translateZ(0);
-        }
+        li.active .delete-btn-floating { opacity: 1; transform: scale(1) translateZ(0); }
 
         .delete-btn-floating:hover {
             background: #ff4d4f; color: white; border-color: #ff4d4f;
@@ -122,7 +103,33 @@
             cursor: zoom-in;
         }
 
-        .status { font-size: 12px; color: #999; text-align: center; margin-top: 10px; background: rgba(255,255,255,0.8); display: inline-block; padding: 2px 10px; border-radius: 10px;}
+        /* ==========================================
+           👇 新增：浮动状态提示气泡 (Toast) 👇
+           ========================================== */
+        #statusMsg {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            
+            background: rgba(0, 0, 0, 0.75); /* 黑色半透明背景 */
+            color: white;
+            font-size: 13px;
+            padding: 8px 16px;
+            border-radius: 20px; /* 胶囊形状 */
+            
+            z-index: 9999;
+            opacity: 0; /* 默认隐藏 */
+            pointer-events: none; /* 隐藏时不阻挡点击 */
+            transition: opacity 0.3s ease; /* 淡入淡出动画 */
+            backdrop-filter: blur(4px); /* 磨砂玻璃效果 (仅支持的浏览器) */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        /* 显示状态 */
+        #statusMsg.show {
+            opacity: 1;
+        }
 
         /* --- 弹窗 --- */
         #confirmModal {
@@ -152,9 +159,7 @@
         <button id="addBtn" onclick="addNote()">记下来</button>
     </div>
 
-    <div style="text-align: center;">
-        <div class="status" id="statusMsg">准备就绪</div>
-    </div>
+    <div id="statusMsg">准备就绪</div>
 
     <ul id="list"></ul>
 
@@ -172,16 +177,18 @@
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$Nk.7e1B.alPcFrs75QBo5.NE80f09zyL8lYQBrPP6.o2pU7zbuEkC';
         const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be'; 
-  
+ 
         // ==========================================
 
         const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
         let currentData = { notes: [] };
         let pendingDeleteId = null; 
+        let statusTimeout = null; // 状态条计时器
 
         // 1. 初始化
         async function loadData() {
-            updateStatus('正在翻开笔记本...');
+            // 初始化时不显示“准备就绪”，或者仅显示正在加载
+            // updateStatus('正在翻开笔记本...'); 
             const localCache = localStorage.getItem('my_notes_cache_v2'); 
             if (localCache) {
                 currentData = JSON.parse(localCache);
@@ -197,7 +204,7 @@
                 currentData = result.record;
                 localStorage.setItem('my_notes_cache_v2', JSON.stringify(currentData));
                 render();
-                updateStatus('✅ 同步完成');
+                updateStatus('同步完成 ✨'); // 只在成功时提示一下
             } catch (error) {
                 console.error(error);
                 if (!localCache) updateStatus('❌ 笔记本打不开');
@@ -214,7 +221,8 @@
                 const data = await res.json();
                 return data.success ? data.data.url : null;
             } catch (e) {
-                alert('图片上传失败'); return null;
+                updateStatus('❌ 图片上传失败');
+                return null;
             }
         }
 
@@ -227,13 +235,17 @@
 
             if (!text && !file) return;
 
-            btn.disabled = true; btn.textContent = '记录中...'; updateStatus('正在记录...');
+            btn.disabled = true; btn.textContent = '...'; 
+            updateStatus('正在记录...');
 
             let imgUrl = null;
             if (file) {
-                updateStatus('正在贴图...');
+                updateStatus('正在上传图片...');
                 imgUrl = await uploadImage(file);
-                if (!imgUrl) { btn.disabled = false; btn.textContent = '记下来'; return; }
+                if (!imgUrl) { 
+                    btn.disabled = false; btn.textContent = '记下来'; 
+                    return; 
+                }
             }
 
             const now = new Date();
@@ -253,6 +265,7 @@
 
             input.value = ''; fileInput.value = '';
             render(); await saveData();
+            
             btn.disabled = false; btn.textContent = '记下来';
         }
 
@@ -265,7 +278,7 @@
                     headers: { 'Content-Type': 'application/json', 'X-Access-Key': API_KEY },
                     body: JSON.stringify(currentData)
                 });
-                updateStatus('✅ 已存档');
+                updateStatus('已存档 ✅');
             } catch (error) {
                 updateStatus('⚠️ 存档失败');
             }
@@ -279,9 +292,6 @@
 
             sortedNotes.forEach((item) => {
                 const li = document.createElement('li');
-                
-                // 关键修复 4：添加 JS 点击事件，手动控制 active 类
-                // 这样在 iOS Safari 上点击一定会触发，不再依赖不稳定的 hover
                 li.onclick = (e) => toggleNoteActive(e, li);
 
                 const delBtn = document.createElement('div');
@@ -310,7 +320,7 @@
                     img.src = item.img;
                     img.className = 'note-img';
                     img.onclick = (e) => {
-                        e.stopPropagation(); // 点击图片看大图，不要切换删除按钮状态
+                        e.stopPropagation();
                         window.open(item.img, '_blank');
                     };
                     li.appendChild(img);
@@ -320,34 +330,22 @@
             });
         }
 
-        // --- 核心修复：手动管理激活状态 ---
         function toggleNoteActive(e, currentLi) {
-            e.stopPropagation(); // 防止冒泡到 document
-            
-            // 如果这个笔记已经是激活状态，就取消激活（可选：或者保持不动）
-            // 这里逻辑设为：点击自己，如果有active就去掉，没有就加上
-            // 但为了体验好，通常是：点击新的 -> 关闭旧的 -> 打开新的
-            
-            // 1. 关闭所有其他的 active
+            e.stopPropagation(); 
             document.querySelectorAll('li.active').forEach(li => {
                 if (li !== currentLi) li.classList.remove('active');
             });
-
-            // 2. 切换当前的
             currentLi.classList.toggle('active');
         }
 
-        // 点击页面空白处，关闭所有激活状态
         document.addEventListener('click', function() {
             document.querySelectorAll('li.active').forEach(li => {
                 li.classList.remove('active');
             });
         });
 
-
-        // 弹窗逻辑
         function showDeleteModal(event, id) {
-            if(event) event.stopPropagation(); // 必须阻止，否则会触发 li 的 onclick 导致按钮闪烁
+            if(event) event.stopPropagation();
             pendingDeleteId = id; 
             document.getElementById('modalOverlay').style.display = 'block';
             document.getElementById('confirmModal').style.display = 'block';
@@ -371,7 +369,25 @@
         }
 
         function handleEnter(e) { if (e.key === 'Enter') addNote(); }
-        function updateStatus(msg) { document.getElementById('statusMsg').textContent = msg; }
+
+        // ==========================================
+        // 👇 升级后的状态更新函数 👇
+        // ==========================================
+        function updateStatus(msg) {
+            const el = document.getElementById('statusMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+
+            // 1. 如果之前有倒计时，先清除，防止旧的计时器提前关闭新的消息
+            if (statusTimeout) {
+                clearTimeout(statusTimeout);
+            }
+
+            // 2. 设置新的 1秒 倒计时
+            statusTimeout = setTimeout(() => {
+                el.classList.remove('show');
+            }, 1000); // 1000毫秒 = 1秒
+        }
 
         loadData();
     </script>

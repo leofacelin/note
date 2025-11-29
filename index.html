@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的云端记事本</title> 
     <style>
-        /* --- 1. 基础样式 (保持不变) --- */
+        /* --- 1. 基础设置 --- */
         body {
             font-family: "Comic Sans MS", "Chalkboard SE", sans-serif;
             max-width: 700px;
@@ -16,14 +16,12 @@
             background-image: linear-gradient(#e1e1e1 1px, transparent 1px);
             background-size: 100% 2rem;
             line-height: 1.6;
-            overflow-x: hidden; /* 防止整体页面横向抖动 */
+            overflow-x: hidden;
         }
 
         /* 输入区 */
         .input-group { 
-            background: #fff; 
-            padding: 15px; 
-            border-radius: 8px; 
+            background: #fff; padding: 15px; border-radius: 8px; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; 
             border: 1px solid #ddd;
@@ -34,98 +32,123 @@
         button:hover { background: #555; }
         button:disabled { background: #ccc; }
 
-        /* --- 2. 笔记卡片容器 (架构调整) --- */
+        /* --- 2. 笔记列表容器 --- */
         ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 15px; }
+
+        /* --- 3. 核心交互样式 --- */
         
+        /* 这里的 li 是“底层”，在手机上它负责显示红色的背景和删除文字 */
         li { 
-            background-color: #feff9c; /* 黄色便利贴 */
-            /* padding: 15px 20px;  <-- 注意：padding 移到了内部 content 里 */
-            padding: 0; /* 必须清零，否则滑动条会被挤进去 */
+            position: relative; /* 定位基准 */
+            padding: 0; 
             box-shadow: 2px 2px 5px rgba(0,0,0,0.1); 
             transform: rotate(-0.5deg);
             transition: transform 0.2s;
-            position: relative; 
-            overflow: hidden; /* 关键：隐藏圆角外的红色按钮 */
-            border-radius: 2px; /* 给一点点圆角 */
+            border-radius: 2px;
+            overflow: hidden; 
+            
+            /* 默认(PC)背景是黄色 */
+            background-color: #feff9c; 
         }
+
         li:hover {
             transform: scale(1.01) rotate(0deg);
             z-index: 10;
             box-shadow: 4px 4px 10px rgba(0,0,0,0.15);
         }
 
-        /* === 🆕 CSS Scroll Snap 滑动核心 === */
+        /* 滑动轨道 */
         .swipe-scroller {
             display: flex;
             width: 100%;
-            overflow-x: hidden; /* 默认（电脑端）禁止滚动 */
+            overflow-x: hidden; /* PC端禁止滚动 */
             scroll-behavior: smooth;
         }
 
-        /* 笔记内容层 */
+        /* 上层内容盖子 */
         .swipe-content {
-            flex: 0 0 100%; /* 宽度强制 100% */
-            padding: 15px 20px; /* Padding 搬家到这里 */
+            flex: 0 0 100%; /* 宽度占满 */
+            padding: 15px 20px;
             box-sizing: border-box;
-            display: flex; 
-            flex-direction: column; 
-            gap: 10px;
+            background-color: #feff9c; /* 笔记也是黄色，盖住底下的色 */
+            position: relative;
+            z-index: 2; /* 确保在上面 */
         }
 
-        /* 滑动出来的红色删除按钮 */
-        .swipe-action {
-            flex: 0 0 80px; /* 按钮宽度 80px */
-            background-color: #ff4d4f;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
+        /* 占位块 (透明) */
+        .swipe-spacer {
+            flex: 0 0 80px; /* 和删除按钮一样宽 */
+            background: transparent; /* 透明！让底下的红色透出来 */
             cursor: pointer;
-            display: none; /* 默认（电脑端）隐藏，防止布局干扰 */
+            display: none; /* PC端隐藏 */
         }
 
-        /* === 📱 移动端专属样式 (Touch Devices) === */
+        /* 底层的删除图标 (手机端显示) */
+        .mobile-delete-bg {
+            position: absolute;
+            top: 0; right: 0; bottom: 0;
+            width: 80px; /* 宽度 */
+            background-color: #ff4d4f; /* 红色背景 */
+            display: flex;
+            align-items: center; justify-content: center;
+            color: white; font-weight: bold;
+            z-index: 0; /* 在最底下 */
+            display: none; /* PC端隐藏 */
+        }
+
+        /* === 📱 移动端专属 (Touch) === */
         @media (pointer: coarse) {
             /* 1. 开启滚动捕捉 */
             .swipe-scroller {
-                overflow-x: auto; /* 允许横向滚动 */
-                scroll-snap-type: x mandatory; /* 强制捕捉 */
-                scrollbar-width: none; /* Firefox 隐藏滚动条 */
+                overflow-x: auto; 
+                scroll-snap-type: x mandatory; 
+                scrollbar-width: none;
             }
-            .swipe-scroller::-webkit-scrollbar { display: none; /* Chrome/Safari 隐藏滚动条 */ }
+            .swipe-scroller::-webkit-scrollbar { display: none; }
 
-            /* 2. 定义捕捉点 */
-            .swipe-content { scroll-snap-align: start; } /* 停在内容起始处 */
-            .swipe-action { 
-                display: flex; /* 手机端显示这个按钮 */
-                scroll-snap-align: end; /* 停在按钮结束处 */
+            /* 2. 捕捉点 */
+            .swipe-content { scroll-snap-align: start; }
+            .swipe-spacer { 
+                display: block; /* 手机端开启占位块 */
+                scroll-snap-align: end; 
             }
 
-            /* 3. 隐藏原本的悬停垃圾桶 (手机没 hover) */
+            /* 3. 显示底层红色背景 */
+            .mobile-delete-bg { display: flex; }
+            
+            /* 4. 修改 li 的背景色为红色 (为了防穿帮，虽然被content盖住了) */
+            li { background-color: #ff4d4f; }
+            
+            /* 5. 隐藏 PC 端垃圾桶 */
             .delete-btn-desktop { display: none !important; }
         }
 
-        /* === 💻 电脑端专属样式 === */
+        /* --- 4. 电脑端样式 --- */
         .note-header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
         .note-text { font-size: 18px; font-weight: 500; word-break: break-all; }
-        
-        .note-time {
-            display: block; font-size: 12px; color: #887b4e; margin-top: 5px; font-style: italic;
-        }
+        .note-time { display: block; font-size: 12px; color: #887b4e; margin-top: 5px; font-style: italic; }
 
-        /* 原来的垃圾桶图标 (仅用于电脑端) */
         .delete-btn-desktop { 
             cursor: pointer; font-size: 18px; margin-left: 15px; 
             opacity: 0; transition: opacity 0.2s;
         }
         li:hover .delete-btn-desktop { opacity: 1; }
 
-        /* 图片样式 */
+        /* --- 5. 图片样式修复 --- */
         .note-img { 
-            max-height: 150px; max-width: 100%; border-radius: 4px; 
-            display: block; margin-top: 5px; 
+            /* 关键修复：允许高度自动，或者限制最大高度 */
+            max-height: 150px; 
+            /* 关键修复：宽度自动，不要强制100%，否则会变形 */
+            width: auto; 
+            max-width: 100%;
+            
+            /* 保持比例 */
+            object-fit: contain;
+            /* 左对齐 */
+            align-self: flex-start;
+
+            border-radius: 4px; 
+            display: block; margin-top: 10px; 
             border: 4px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             cursor: zoom-in;
         }
@@ -274,7 +297,7 @@
             }
         }
 
-        // 5. 渲染列表 (核心修改：支持滑动结构)
+        // 5. 渲染列表 (架构调整：透视效果)
         function render() {
             const listEl = document.getElementById('list');
             listEl.innerHTML = ''; 
@@ -284,16 +307,21 @@
             sortedNotes.forEach((item) => {
                 const li = document.createElement('li');
                 
-                // === 🆕 核心结构变动 ===
-                // 创建滑轨容器
+                // === A. 底层：静止的删除按钮 (手机端才显示) ===
+                const mobileBg = document.createElement('div');
+                mobileBg.className = 'mobile-delete-bg';
+                mobileBg.textContent = '删除';
+                li.appendChild(mobileBg);
+
+                // === B. 滑动轨道 ===
                 const scroller = document.createElement('div');
                 scroller.className = 'swipe-scroller';
 
-                // --- A. 内容层 (100%宽) ---
+                // --- B1. 内容盖子 (黄色) ---
                 const content = document.createElement('div');
                 content.className = 'swipe-content';
 
-                // 1. 顶部：文本 + 电脑端垃圾桶
+                // 笔记头部
                 const header = document.createElement('div');
                 header.className = 'note-header';
                 
@@ -307,7 +335,7 @@
                 textDiv.appendChild(span);
                 textDiv.appendChild(timeSpan);
 
-                // 电脑端专属垃圾桶 (Emoji)
+                // PC端垃圾桶
                 const desktopDel = document.createElement('span');
                 desktopDel.className = 'delete-btn-desktop';
                 desktopDel.textContent = '🗑️'; 
@@ -317,7 +345,7 @@
                 header.appendChild(desktopDel);
                 content.appendChild(header);
 
-                // 2. 图片
+                // 图片
                 if (item.img) {
                     const img = document.createElement('img');
                     img.src = item.img;
@@ -326,24 +354,21 @@
                     content.appendChild(img);
                 }
 
-                // --- B. 动作层 (手机滑动显示) ---
-                const action = document.createElement('div');
-                action.className = 'swipe-action';
-                action.textContent = '删除';
-                // 手机点击“删除”也触发同样的弹窗，但位置我们会特殊处理
-                action.onclick = (e) => showDeleteModal(e, item.id, true);
+                // --- B2. 透明占位块 (点击它触发删除) ---
+                const spacer = document.createElement('div');
+                spacer.className = 'swipe-spacer';
+                // 只有点击这个透明区域，才算点了删除
+                spacer.onclick = (e) => showDeleteModal(e, item.id, true);
 
-                // 组装三明治
                 scroller.appendChild(content);
-                scroller.appendChild(action);
+                scroller.appendChild(spacer);
                 li.appendChild(scroller);
 
                 listEl.appendChild(li);
             });
         }
 
-        // 6. 删除确认逻辑
-        // isMobileAction: 标记是否来自手机滑动按钮
+        // 6. 删除确认
         function showDeleteModal(event, id, isMobileAction = false) {
             event.stopPropagation(); 
             pendingDeleteId = id; 
@@ -351,15 +376,12 @@
             const modal = document.getElementById('confirmModal');
             
             if (isMobileAction) {
-                // 📱 手机端：直接显示在屏幕中央 (因为滑动后手的位置不固定)
-                // 简单的居中策略，利用 CSS fixed 可能更好，这里用绝对定位模拟
-                // 获取当前 li 的位置，或者直接显示在点击处
-                // 为了简单，我们让它出现在点击位置左侧一点
+                // 手机端：居中显示
                 modal.style.top = (event.pageY - 50) + 'px';
-                modal.style.left = '50%'; // 居中
-                modal.style.transform = 'translateX(-50%)'; // 居中修正
+                modal.style.left = '50%'; 
+                modal.style.transform = 'translateX(-50%)';
             } else {
-                // 💻 电脑端：跟随鼠标
+                // PC端：跟随鼠标
                 modal.style.transform = 'none';
                 modal.style.top = (event.pageY + 10) + 'px';
                 modal.style.left = (event.pageX - 80) + 'px';
@@ -386,9 +408,9 @@
 
         document.addEventListener('click', function(event) {
             const modal = document.getElementById('confirmModal');
-            // 如果点的是“动作层”里的元素，也不关闭
+            // 如果点的是 PC垃圾桶 或 手机占位块，都不关
             if (!event.target.classList.contains('delete-btn-desktop') && 
-                !event.target.classList.contains('swipe-action') &&
+                !event.target.classList.contains('swipe-spacer') &&
                 !modal.contains(event.target)) {
                 closeModal();
             }

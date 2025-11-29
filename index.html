@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的云端记事本</title> 
     <style>
         /* --- 1. 基础设置 --- */
@@ -17,7 +17,6 @@
             background-size: 100% 2rem;
             line-height: 1.6;
             overflow-x: hidden;
-            /* 禁止整个页面的橡皮筋效果，体验更像App */
             overscroll-behavior-y: none; 
         }
 
@@ -39,7 +38,6 @@
 
         /* --- 3. 核心交互样式 --- */
         
-        /* 这里的 li 是“底层”，在手机上它负责显示红色的背景和删除文字 */
         li { 
             position: relative; 
             padding: 0; 
@@ -67,10 +65,10 @@
 
         /* 上层内容盖子 */
         .swipe-content {
-            flex: 0 0 100%; /* 宽度占满 */
+            flex: 0 0 100%; 
             padding: 15px 20px;
             box-sizing: border-box;
-            background-color: #feff9c; /* 笔记也是黄色，盖住底下的色 */
+            background-color: #feff9c; 
             position: relative;
             z-index: 2; 
         }
@@ -83,7 +81,7 @@
             display: none; 
         }
 
-        /* 底层的删除图标 (手机端显示) */
+        /* 底层的删除图标 */
         .mobile-delete-bg {
             position: absolute;
             top: 0; right: 0; bottom: 0;
@@ -96,14 +94,13 @@
             display: none; 
         }
 
-        /* === 📱 移动端专属 (Touch) === */
+        /* === 📱 移动端专属 === */
         @media (pointer: coarse) {
             .swipe-scroller {
                 overflow-x: auto; 
                 scroll-snap-type: x mandatory; 
                 scrollbar-width: none;
-                
-                /* ✨✨✨ 关键修改：禁止橡皮筋回弹 ✨✨✨ */
+                /* 尽可能用 CSS 禁止回弹，JS 作为双重保险 */
                 overscroll-behavior-x: none; 
             }
             .swipe-scroller::-webkit-scrollbar { display: none; }
@@ -130,22 +127,17 @@
         }
         li:hover .delete-btn-desktop { opacity: 1; }
 
-        /* --- 5. 图片样式修复 --- */
         .note-img { 
             max-height: 150px; 
-            width: auto; 
-            max-width: 100%;
-            object-fit: contain;
-            align-self: flex-start;
-            border-radius: 4px; 
-            display: block; margin-top: 10px; 
+            width: auto; max-width: 100%;
+            object-fit: contain; align-self: flex-start;
+            border-radius: 4px; display: block; margin-top: 10px; 
             border: 4px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             cursor: zoom-in;
         }
 
         .status { font-size: 12px; color: #999; text-align: center; margin-top: 10px; background: rgba(255,255,255,0.8); display: inline-block; padding: 2px 10px; border-radius: 10px;}
 
-        /* 弹窗样式 */
         #confirmModal {
             display: none; position: absolute; background: white;
             border: 1px solid #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
@@ -185,14 +177,54 @@
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$Nk.7e1B.alPcFrs75QBo5.NE80f09zyL8lYQBrPP6.o2pU7zbuEkC';
         const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be'; 
-   
+  
         // ==========================================
 
         const URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
         let currentData = { notes: [] };
         let pendingDeleteId = null; 
 
-        // 1. 初始化
+        // === 🆕 核心升级：JS 手动拦截右滑 ===
+        const listContainer = document.getElementById('list');
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        // 1. 手指按下：记录初始坐标
+        listContainer.addEventListener('touchstart', function(e) {
+            // 找到当前滑动的那个轨道
+            const scroller = e.target.closest('.swipe-scroller');
+            if (scroller) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: false });
+
+        // 2. 手指移动：判断方向并拦截
+        listContainer.addEventListener('touchmove', function(e) {
+            const scroller = e.target.closest('.swipe-scroller');
+            if (!scroller) return;
+
+            const touchCurrentX = e.touches[0].clientX;
+            const touchCurrentY = e.touches[0].clientY;
+            
+            const diffX = touchCurrentX - touchStartX;
+            const diffY = touchCurrentY - touchStartY;
+
+            // 判断是否主要是横向滑动 (X移动 > Y移动)
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                
+                // 关键逻辑：
+                // 如果当前处于初始位置 (scrollLeft <= 0)
+                // 并且手指正在向右滑 (diffX > 0)
+                if (scroller.scrollLeft <= 0 && diffX > 0) {
+                    // ⛔️ 阻止默认行为（即阻止橡皮筋回弹）
+                    e.preventDefault();
+                }
+            }
+        }, { passive: false });
+
+        // === 原有逻辑 ===
+
         async function loadData() {
             updateStatus('正在翻开笔记本...');
             const localCache = localStorage.getItem('my_notes_cache_v2'); 
@@ -217,7 +249,6 @@
             }
         }
 
-        // 2. 上传图片
         async function uploadImage(file) {
             const formData = new FormData();
             formData.append('image', file);
@@ -232,7 +263,6 @@
             }
         }
 
-        // 3. 添加笔记
         async function addNote() {
             const input = document.getElementById('inputBox');
             const fileInput = document.getElementById('fileInput');
@@ -271,7 +301,6 @@
             btn.disabled = false; btn.textContent = '记下来';
         }
 
-        // 4. 保存
         async function saveData() {
             updateStatus('正在存档...');
             localStorage.setItem('my_notes_cache_v2', JSON.stringify(currentData));
@@ -287,7 +316,6 @@
             }
         }
 
-        // 5. 渲染列表
         function render() {
             const listEl = document.getElementById('list');
             listEl.innerHTML = ''; 
@@ -350,7 +378,6 @@
             });
         }
 
-        // 6. 删除确认
         function showDeleteModal(event, id, isMobileAction = false) {
             event.stopPropagation(); 
             pendingDeleteId = id; 

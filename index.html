@@ -9,18 +9,18 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { scrollbar-width: none; -ms-overflow-style: none; }
         ::-webkit-scrollbar { display: none; }
 
         body {
-            /* 👇 更新：底色改为 f0f0f0，并去掉了之前的纹理图片，更加干净 */
             background-color: #f0f0f0; 
             
-            font-family: 'Roboto', "Source Han Sans CN", "Noto Sans SC", sans-serif;
+            /* 👇 更新：首选字体改为 Rubik */
+            font-family: 'Rubik', "Source Han Sans CN", "Noto Sans SC", sans-serif;
+            
             margin: 0;
             padding: 0 10px 80px 10px; 
             color: #333;
@@ -45,7 +45,11 @@
         #timeline-container { max-width: 600px; margin: 0 auto; padding-top: 20px; }
 
         .date-header {
-            font-family: 'Roboto', sans-serif; font-weight: 900; font-size: 46px;
+            /* 👇 更新：确保日期使用 Rubik Bold 700 */
+            font-family: 'Rubik', sans-serif; 
+            font-weight: 700; 
+            
+            font-size: 46px;
             color: #1a1a1a; margin: 40px 0 20px 0; letter-spacing: -2px; line-height: 1;
             padding-left: 5px; 
         }
@@ -65,7 +69,10 @@
 
         .note-content {
             font-size: 20px; 
-            font-weight: 500; line-height: 1.5; color: #222;
+            /* 👇 更新：正文使用 Regular 400 */
+            font-weight: 400; 
+            
+            line-height: 1.5; color: #222;
             word-break: break-all; white-space: pre-wrap;
         }
 
@@ -196,7 +203,7 @@
         // ==========================================
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$ebskDQwSsOfisis5TCXKdOHQ4LlGGnXpggBygD6/bcWPenwaHVAgi';
-        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';  
+        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';   
         // ==========================================
 
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -212,7 +219,6 @@
         let isInputOpen = false;
         let draftText = "";
         
-        // RGB 莫兰迪色盘
         const DAY_COLORS = [
             'rgb(239, 217, 196)', 
             'rgb(207, 229, 212)', 
@@ -223,7 +229,7 @@
         let sessionColorMap = {};
 
         async function loadData() {
-            const localCache = localStorage.getItem('mylog_v51'); 
+            const localCache = localStorage.getItem('mylog_v54_fonts'); 
             if (localCache) {
                 currentData = JSON.parse(localCache);
                 renderTimeline();
@@ -233,7 +239,7 @@
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
                 currentData = json.record;
-                localStorage.setItem('mylog_v51', JSON.stringify(currentData));
+                localStorage.setItem('mylog_v54_fonts', JSON.stringify(currentData));
                 renderTimeline();
             } catch (e) {
                 console.error(e);
@@ -446,7 +452,7 @@
                     method: 'PUT', headers: REQ_HEADERS, body: JSON.stringify(currentData)
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                localStorage.setItem('mylog_v51', JSON.stringify(currentData));
+                localStorage.setItem('mylog_v54_fonts', JSON.stringify(currentData));
                 updateStatus('已同步 ✅');
             } catch (e) {
                 alert(`⚠️ 保存失败：${e.message}\n请检查 Key。`);

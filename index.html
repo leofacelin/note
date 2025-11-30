@@ -20,7 +20,6 @@
             background-color: #dcc6b0; 
             font-family: 'Roboto', "Source Han Sans CN", "Noto Sans SC", sans-serif;
             margin: 0;
-            /* 1. 更新：左右 padding 从 20px 减小到 10px，卡片更宽 */
             padding: 0 10px 80px 10px; 
             color: #333;
             min-height: 100vh;
@@ -36,7 +35,7 @@
             background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer;
-            transition: transform 0.2s; margin-top: 10px; margin-right: 10px; /* 补偿一点右边距 */
+            transition: transform 0.2s; margin-top: 10px; margin-right: 10px; 
         }
         .fab-add:active { transform: scale(0.9); }
         .fab-add svg { width: 32px; height: 32px; fill: #333; }
@@ -46,26 +45,23 @@
         .date-header {
             font-family: 'Roboto', sans-serif; font-weight: 900; font-size: 51px;
             color: #1a1a1a; margin: 40px 0 20px 0; letter-spacing: -2px; line-height: 1;
-            padding-left: 5px; /* 标题稍微缩进一点点对齐视觉 */
+            padding-left: 5px; 
         }
 
         .note-card {
             background-color: #fff; border-radius: 24px; padding: 24px;
-            margin-bottom: 20px; position: relative;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s; cursor: pointer; 
             
-            /* 2. 更新：增加透明度和变换的过渡，为删除动画做准备 */
-            transition: all 0.3s ease-out;
-            opacity: 1;
-            transform: scale(1);
+            /* 👇 更新：笔记下间距从 20px 改为 10px */
+            margin-bottom: 10px; 
+            
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s; cursor: pointer; 
+            transition: all 0.3s ease-out; opacity: 1; transform: scale(1);
         }
         .note-card:active { transform: scale(0.99); }
 
-        /* 2. 更新：删除时的动画状态类 */
         .note-card.deleting {
-            opacity: 0;
-            transform: scale(0.9);
-            margin-bottom: -100px; /* 这是一个小技巧，让后面的元素滑上来 */
+            opacity: 0; transform: scale(0.9); margin-bottom: -100px; 
         }
 
         .note-content {
@@ -200,7 +196,7 @@
         // ==========================================
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$ebskDQwSsOfisis5TCXKdOHQ4LlGGnXpggBygD6/bcWPenwaHVAgi';
-        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';  
+        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';   
         // ==========================================
 
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -240,11 +236,6 @@
 
         function renderTimeline() {
             const container = document.getElementById('timeline-container');
-            // 注意：这里我们不再简单地 innerHTML = '' 清空
-            // 因为如果是删除操作引发的重绘，我们需要先处理动画
-            // 但为了代码简单，我们只在添加/初始化时全量渲染
-            // 删除操作我们会单独在 DOM 上操作，不走这里
-            
             container.innerHTML = ''; 
 
             const notes = (currentData.notes || []).sort((a, b) => b.id - a.id);
@@ -293,7 +284,7 @@
                 groupNotes.forEach(note => {
                     const card = document.createElement('div');
                     card.className = 'note-card';
-                    card.id = 'note-' + note.id; // 给每个卡片加 ID，方便删除时找
+                    card.id = 'note-' + note.id; 
                     card.style.backgroundColor = groupColor;
                     card.onclick = (e) => toggleActive(card, e);
 
@@ -476,34 +467,25 @@
 
         function showDeleteModal(id) {
             pendingDeleteId = id;
-            closeModal(); // 关掉之前的（如果有）
+            closeModal(); 
             document.getElementById('modalOverlay').style.display = 'block';
             document.getElementById('confirmModal').style.display = 'block';
         }
 
-        // --- 核心修复：带动画的删除逻辑 ---
         async function confirmDelete() {
             if (!pendingDeleteId) return;
-            
-            // 1. 关掉弹窗
             closeModal();
 
-            // 2. 找到 DOM 元素
             const cardEl = document.getElementById('note-' + pendingDeleteId);
             if (cardEl) {
-                // 3. 添加 .deleting 类，触发 CSS 动画 (300ms)
                 cardEl.classList.add('deleting');
-                
-                // 4. 等待动画结束 (300ms)
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
 
-            // 5. 真正删除数据
             const idx = currentData.notes.findIndex(n => n.id === pendingDeleteId);
             if (idx > -1) {
                 currentData.notes.splice(idx, 1);
-                // 这里重新渲染会移除该元素
-                renderTimeline(); 
+                renderTimeline();
                 saveData(); 
             }
             pendingDeleteId = null;
@@ -512,6 +494,7 @@
         function closeModal() {
             document.getElementById('modalOverlay').style.display = 'none';
             document.getElementById('confirmModal').style.display = 'none';
+            pendingDeleteId = null;
         }
 
         let statusTimeout = null;

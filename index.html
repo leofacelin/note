@@ -17,7 +17,9 @@
         ::-webkit-scrollbar { display: none; }
 
         body {
-            background-color: #dcc6b0; 
+            /* 👇 更新：底色改为 f0f0f0，并去掉了之前的纹理图片，更加干净 */
+            background-color: #f0f0f0; 
+            
             font-family: 'Roboto', "Source Han Sans CN", "Noto Sans SC", sans-serif;
             margin: 0;
             padding: 0 10px 80px 10px; 
@@ -62,7 +64,6 @@
         }
 
         .note-content {
-            /* 👇 更新：18px -> 20px */
             font-size: 20px; 
             font-weight: 500; line-height: 1.5; color: #222;
             word-break: break-all; white-space: pre-wrap;
@@ -195,7 +196,7 @@
         // ==========================================
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$ebskDQwSsOfisis5TCXKdOHQ4LlGGnXpggBygD6/bcWPenwaHVAgi';
-        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';   
+        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';  
         // ==========================================
 
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -211,7 +212,7 @@
         let isInputOpen = false;
         let draftText = "";
         
-        // 🎨 RGB 莫兰迪色盘 (5色)
+        // RGB 莫兰迪色盘
         const DAY_COLORS = [
             'rgb(239, 217, 196)', 
             'rgb(207, 229, 212)', 

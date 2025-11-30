@@ -65,7 +65,8 @@
             
             border-radius: 24px 24px 0 0;
             margin-top: -24px; 
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.02); 
+            /* 👇 更新：加深了堆叠时的向上阴影 */
+            box-shadow: 0 -3px 12px rgba(0,0,0,0.08); 
             padding-bottom: 40px; 
         }
 
@@ -77,7 +78,8 @@
         .card-stack .note-card:last-child {
             border-radius: 24px; 
             padding-bottom: 24px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
+            /* 👇 更新：加深了最下方卡片的底部阴影 */
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
         }
 
         .note-card:active { transform: scale(0.98); }
@@ -247,13 +249,13 @@
         let isInputOpen = false;
         let draftText = "";
         
-        // 🎨 新配色 (6组) - v6.7
+        // 🎨 新配色 (6组) - v6.8
         const DAY_COLORS = [
             'rgb(239, 217, 196)', // 1
             'rgb(207, 229, 212)', // 2
             'rgb(253, 214, 209)', // 3
             'rgb(204, 222, 236)', // 4
-            'rgb(206, 198, 236)', // 5 (与4相同，增加蓝色出现概率)
+            'rgb(206, 198, 236)', // 5
             'rgb(212, 212, 212)'  // 6
         ];
 
@@ -265,7 +267,7 @@
         }
 
         async function loadData() {
-            const localCache = localStorage.getItem('mylog_v67_colors'); 
+            const localCache = localStorage.getItem('mylog_v69_shadow'); 
             if (localCache) {
                 currentData = JSON.parse(localCache);
                 renderTimeline();
@@ -275,7 +277,7 @@
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
                 currentData = json.record;
-                localStorage.setItem('mylog_v67_colors', JSON.stringify(currentData));
+                localStorage.setItem('mylog_v69_shadow', JSON.stringify(currentData));
                 renderTimeline();
             } catch (e) {
                 console.error(e);
@@ -520,7 +522,7 @@
                     method: 'PUT', headers: REQ_HEADERS, body: JSON.stringify(currentData)
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                localStorage.setItem('mylog_v67_colors', JSON.stringify(currentData));
+                localStorage.setItem('mylog_v69_shadow', JSON.stringify(currentData));
                 updateStatus('已同步 ✅');
             } catch (e) {
                 alert(`⚠️ 保存失败：${e.message}\n请检查 Key。`);

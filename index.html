@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { scrollbar-width: none; -ms-overflow-style: none; }
@@ -17,10 +18,7 @@
 
         body {
             background-color: #f0f0f0; 
-            
-            /* 👇 更新：首选字体改为 Rubik */
             font-family: 'Rubik', "Source Han Sans CN", "Noto Sans SC", sans-serif;
-            
             margin: 0;
             padding: 0 10px 80px 10px; 
             color: #333;
@@ -45,10 +43,7 @@
         #timeline-container { max-width: 600px; margin: 0 auto; padding-top: 20px; }
 
         .date-header {
-            /* 👇 更新：确保日期使用 Rubik Bold 700 */
-            font-family: 'Rubik', sans-serif; 
-            font-weight: 700; 
-            
+            font-family: 'Rubik', sans-serif; font-weight: 700; 
             font-size: 46px;
             color: #1a1a1a; margin: 40px 0 20px 0; letter-spacing: -2px; line-height: 1;
             padding-left: 5px; 
@@ -68,10 +63,7 @@
         }
 
         .note-content {
-            font-size: 20px; 
-            /* 👇 更新：正文使用 Regular 400 */
-            font-weight: 400; 
-            
+            font-size: 20px; font-weight: 400; 
             line-height: 1.5; color: #222;
             word-break: break-all; white-space: pre-wrap;
         }
@@ -228,8 +220,20 @@
         ];
         let sessionColorMap = {};
 
+        // 🆔 --- 1. 身份初始化 ---
+        // 尝试从本地获取 ID，如果没有，就生成一个新的并存起来
+        let myUserId = localStorage.getItem('mylog_user_id');
+        if (!myUserId) {
+            // 生成简单的随机 ID (例如: u_1701234567890_abc12)
+            myUserId = 'u_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            localStorage.setItem('mylog_user_id', myUserId);
+            console.log("New User ID generated:", myUserId);
+        } else {
+            console.log("Welcome back:", myUserId);
+        }
+
         async function loadData() {
-            const localCache = localStorage.getItem('mylog_v54_fonts'); 
+            const localCache = localStorage.getItem('mylog_v60_auth'); 
             if (localCache) {
                 currentData = JSON.parse(localCache);
                 renderTimeline();
@@ -239,7 +243,7 @@
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
                 currentData = json.record;
-                localStorage.setItem('mylog_v54_fonts', JSON.stringify(currentData));
+                localStorage.setItem('mylog_v60_auth', JSON.stringify(currentData));
                 renderTimeline();
             } catch (e) {
                 console.error(e);
@@ -301,14 +305,20 @@
                     card.style.backgroundColor = groupColor;
                     card.onclick = (e) => toggleActive(card, e);
 
-                    const delBtn = document.createElement('div');
-                    delBtn.className = 'btn-delete';
-                    delBtn.textContent = '×';
-                    delBtn.onclick = (e) => {
-                        e.stopPropagation(); 
-                        showDeleteModal(note.id);
+                    // 🔒 --- 2. 权限判断 ---
+                    // 只有 (是我写的) 或 (没有签名的旧笔记) 才显示删除按钮
+                    const canDelete = (!note.creatorId) || (note.creatorId === myUserId);
+
+                    if (canDelete) {
+                        const delBtn = document.createElement('div');
+                        delBtn.className = 'btn-delete';
+                        delBtn.textContent = '×';
+                        delBtn.onclick = (e) => {
+                            e.stopPropagation(); 
+                            showDeleteModal(note.id);
+                        }
+                        card.appendChild(delBtn);
                     }
-                    card.appendChild(delBtn);
 
                     const content = document.createElement('div');
                     content.className = 'note-content';
@@ -397,7 +407,12 @@
                 const fullTime = now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
 
                 const newNote = {
-                    id: tempId, text: text, img: displayImgUrl, date: fullTime
+                    id: tempId, 
+                    text: text, 
+                    img: displayImgUrl, 
+                    date: fullTime,
+                    // 🔒 --- 3. 盖章 ---
+                    creatorId: myUserId 
                 };
 
                 if (!currentData.notes) currentData.notes = [];
@@ -452,7 +467,7 @@
                     method: 'PUT', headers: REQ_HEADERS, body: JSON.stringify(currentData)
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                localStorage.setItem('mylog_v54_fonts', JSON.stringify(currentData));
+                localStorage.setItem('mylog_v60_auth', JSON.stringify(currentData));
                 updateStatus('已同步 ✅');
             } catch (e) {
                 alert(`⚠️ 保存失败：${e.message}\n请检查 Key。`);

@@ -141,6 +141,37 @@
         .btn-yes { background: #ff4d4f; color: white; }
         .btn-no { background: #f0f0f0; color: #333; }
 
+        /* ==========================================
+           👇 新增：图片查看器 (Lightbox) 样式 👇
+           ========================================== */
+        #imageViewerModal {
+            display: none; /* 默认隐藏 */
+            position: fixed;
+            z-index: 3000; /* 最顶层 */
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.9); /* 深黑背景 */
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            cursor: zoom-out; /* 提示点击可关闭 */
+            /* 简单的淡入动画 */
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        #expandedImage {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; /* 保持比例，确保完整显示 */
+            border-radius: 4px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            /* 简单的缩放动画 */
+            animation: zoomIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
     </style>
 </head>
 <body>
@@ -164,16 +195,20 @@
         <button class="modal-btn btn-no" onclick="closeModal()">取消</button>
     </div>
 
+    <div id="imageViewerModal" onclick="closeImageViewer()">
+        <img id="expandedImage" src="" alt="Full size image">
+    </div>
+
+
     <script>
         // ==========================================
         // 👇 配置区 👇
         // ==========================================
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$ebskDQwSsOfisis5TCXKdOHQ4LlGGnXpggBygD6/bcWPenwaHVAgi';
-        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be'; 
+        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';    
         // ==========================================
 
-        // 🟢 修复变量名冲突：从 URL 改为 API_URL
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
         
         const REQ_HEADERS = {
@@ -198,7 +233,6 @@
                 renderTimeline();
             }
             try {
-                // 修复：使用 API_URL
                 const res = await fetch(API_URL, { method: 'GET', headers: { 'X-Master-Key': API_KEY } });
                 
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -287,7 +321,8 @@
                         img.src = note.img; 
                         img.onclick = (e) => {
                             e.stopPropagation();
-                            window.open(note.img, '_blank');
+                            // window.open(note.img, '_blank'); // 旧方式
+                            openImageViewer(note.img); // 🟢 新方式：页内打开
                         }
                         card.appendChild(img);
                     }
@@ -339,7 +374,6 @@
             }
         }
 
-        // --- 添加笔记 (已修复 URL 冲突) ---
         async function addNote() {
             const btnSave = document.getElementById('btnSave');
             
@@ -362,7 +396,6 @@
                 const tempId = Date.now();
                 let displayImgUrl = null;
 
-                // 🟢 这里的 URL 现在引用的是全局 window.URL，不会再报错了
                 if (fileToUpload) {
                     displayImgUrl = URL.createObjectURL(fileToUpload);
                 }
@@ -438,7 +471,6 @@
 
         async function saveData() {
             try {
-                // 修复：使用 API_URL
                 const res = await fetch(API_URL, {
                     method: 'PUT',
                     headers: REQ_HEADERS,
@@ -514,6 +546,24 @@
             if (isSameDay && !forComparison) return "Today"; 
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             return `${monthNames[dateObj.getMonth()]}.${dateObj.getDate()}`;
+        }
+
+        // ==========================================
+        // 👇 新增：图片查看器逻辑 👇
+        // ==========================================
+        function openImageViewer(src) {
+            const modal = document.getElementById('imageViewerModal');
+            const img = document.getElementById('expandedImage');
+            img.src = src;
+            // 使用 flex 布局来实现居中
+            modal.style.display = 'flex';
+        }
+
+        function closeImageViewer() {
+            const modal = document.getElementById('imageViewerModal');
+            modal.style.display = 'none';
+            // 清空图片源，避免下次打开时闪现旧图
+            document.getElementById('expandedImage').src = '';
         }
 
         loadData();

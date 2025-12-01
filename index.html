@@ -169,6 +169,7 @@
         .app-footer {
             text-align: center; font-size: 11px; color: #999; padding: 40px 0 20px 0;
             font-family: 'Rubik', sans-serif; opacity: 0.6; margin-top: auto; 
+            cursor: pointer; user-select: none; /* 防止选中文本 */
         }
 
     </style>
@@ -185,7 +186,7 @@
 
     <div id="timeline-container"></div>
 
-    <div class="app-footer">ZINEBONOTE Made with 🙂</div>
+    <div class="app-footer" onclick="triggerGodMode()">ZINEBONOTE Made with 🙂</div>
 
     <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect()">
 
@@ -206,7 +207,7 @@
         // ==========================================
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$ebskDQwSsOfisis5TCXKdOHQ4LlGGnXpggBygD6/bcWPenwaHVAgi';
-        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';      
+        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';     
         // ==========================================
 
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -222,20 +223,48 @@
         let isInputOpen = false;
         let draftText = "";
         
-        // 🎨 v1.1 莫兰迪灰调 (6组)
         const DAY_COLORS = [
-            'rgb(239, 217, 196)', 
-            'rgb(207, 229, 212)', 
-            'rgb(253, 214, 209)', 
-            'rgb(204, 222, 236)', 
-            'rgb(206, 198, 236)', 
-            'rgb(212, 212, 212)'  
+            'rgb(239, 217, 196)', 'rgb(207, 229, 212)', 'rgb(253, 214, 209)', 
+            'rgb(204, 222, 236)', 'rgb(204, 222, 236)', 'rgb(212, 212, 212)'  
         ];
 
+        // 🆔 --- 1. 强化版身份系统 (兼容旧版+GodMode) ---
         let myUserId = localStorage.getItem('zinebonote_user_id');
+        
+        // 兼容性检查：如果新Key不存在，尝试找找旧Key
         if (!myUserId) {
-            myUserId = 'u_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-            localStorage.setItem('zinebonote_user_id', myUserId);
+            const oldKey = localStorage.getItem('mylog_user_id'); // v6.x 的 Key
+            if (oldKey) {
+                myUserId = oldKey;
+                localStorage.setItem('zinebonote_user_id', oldKey); // 迁移过来
+            } else {
+                // 确实是新用户
+                myUserId = 'u_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                localStorage.setItem('zinebonote_user_id', myUserId);
+            }
+        }
+
+        // 上帝模式状态
+        let isGodMode = false;
+        let godModeClicks = 0;
+        let godModeTimer = null;
+
+        // 🟢 核心功能：上帝模式触发器
+        function triggerGodMode() {
+            godModeClicks++;
+            
+            // 2秒内没继续点，重置计数
+            if (godModeTimer) clearTimeout(godModeTimer);
+            godModeTimer = setTimeout(() => { godModeClicks = 0; }, 2000);
+
+            if (godModeClicks >= 5) {
+                isGodMode = !isGodMode; // 切换开关
+                godModeClicks = 0;
+                
+                updateStatus(isGodMode ? "🦸‍♂️ 上帝模式：已开启" : "🔒 上帝模式：已关闭");
+                // 重新渲染以显示/隐藏删除按钮
+                renderTimeline();
+            }
         }
 
         async function loadData() {
@@ -267,20 +296,19 @@
 
             notes.forEach(note => {
                 const d = note.date ? new Date(note.date) : new Date(note.id);
-                // 兼容逻辑：处理带时间的格式
+                // 兼容性时间解析
                 let dateKey;
-                if(note.date && note.date.includes(' ') && !isNaN(Date.parse(note.date))) {
-                    dateKey = formatDate(d, true);
-                } else if(isNaN(d.getTime())) {
-                    // 尝试手动解析 YYYY-MM-DD
-                    try {
+                try {
+                    if(note.date && note.date.includes(' ') && !isNaN(Date.parse(note.date))) {
+                        dateKey = formatDate(d, true);
+                    } else if(isNaN(d.getTime())) {
                         const parts = note.date.split(' ')[0].split('-');
                         dateKey = `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(parts[1])-1]}.${parseInt(parts[2])}`;
                         if(dateKey === formatDate(new Date(), true)) dateKey = "Today";
-                    } catch(e) { dateKey = "Unknown"; }
-                } else {
-                    dateKey = formatDate(d, true);
-                }
+                    } else {
+                        dateKey = formatDate(d, true);
+                    }
+                } catch(e) { dateKey = "Unknown"; }
                 
                 if (!groups[dateKey]) groups[dateKey] = [];
                 groups[dateKey].push(note);
@@ -340,7 +368,12 @@
                         card.style.zIndex = index + 1;
                         card.onclick = (e) => toggleActive(card, e);
 
-                        const canDelete = (!note.creatorId) || (note.creatorId === myUserId);
+                        // 🔒 权限判断逻辑升级：
+                        // 1. 没有 creatorId (旧数据) -> 可删
+                        // 2. creatorId 匹配 -> 可删
+                        // 3. 上帝模式开启 -> 可删
+                        const canDelete = (!note.creatorId) || (note.creatorId === myUserId) || isGodMode;
+                        
                         if (canDelete) {
                             const delBtn = document.createElement('div');
                             delBtn.className = 'btn-delete';
@@ -494,7 +527,12 @@
             document.querySelectorAll('.note-card.active').forEach(c => c.classList.remove('active'));
             if (!wasActive) card.classList.add('active');
         }
-        document.addEventListener('click', function(e) { if (!e.target.closest('.note-card')) document.querySelectorAll('.note-card.active').forEach(c => c.classList.remove('active')); });
+        document.addEventListener('click', function(e) { 
+            // 如果处于上帝模式，不取消 Active，方便连续删除
+            if (!e.target.closest('.note-card') && !e.target.closest('.app-footer')) {
+                document.querySelectorAll('.note-card.active').forEach(c => c.classList.remove('active')); 
+            }
+        });
 
         function showDeleteModal(id) {
             pendingDeleteId = id;

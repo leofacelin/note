@@ -231,7 +231,7 @@
         // ==========================================
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$ebskDQwSsOfisis5TCXKdOHQ4LlGGnXpggBygD6/bcWPenwaHVAgi';
-        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';   
+        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';    
         // ==========================================
 
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -247,7 +247,7 @@
         let isInputOpen = false;
         let draftText = "";
         
-        // 🎨 配色方案 (6组莫兰迪灰调)
+        // 🎨 莫兰迪灰调 (6组)
         const DAY_COLORS = [
             'rgb(239, 217, 196)', 
             'rgb(207, 229, 212)', 
@@ -257,6 +257,10 @@
             'rgb(212, 212, 212)'  
         ];
 
+        // 🟢 新增：笔记ID到颜色的映射表 (Session级别，刷新后重置)
+        // 这样在同一次页面访问中，无论渲染多少次（加载缓存、加载网络），颜色都保持一致
+        let noteColorMap = {};
+
         // 🆔 --- 身份初始化 ---
         let myUserId = localStorage.getItem('mylog_user_id');
         if (!myUserId) {
@@ -265,7 +269,7 @@
         }
 
         async function loadData() {
-            const localCache = localStorage.getItem('mylog_v68_final'); 
+            const localCache = localStorage.getItem('mylog_v69_stable'); 
             if (localCache) {
                 currentData = JSON.parse(localCache);
                 renderTimeline();
@@ -275,7 +279,7 @@
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
                 currentData = json.record;
-                localStorage.setItem('mylog_v68_final', JSON.stringify(currentData));
+                localStorage.setItem('mylog_v69_stable', JSON.stringify(currentData));
                 renderTimeline();
             } catch (e) {
                 console.error(e);
@@ -312,12 +316,6 @@
                 const isToday = (key === realTodayKey);
                 const displayTitle = isToday ? "Today" : key;
 
-                if (!window.sessionColorMap) window.sessionColorMap = {};
-                if (!window.sessionColorMap[key]) {
-                    window.sessionColorMap[key] = DAY_COLORS[Math.floor(Math.random() * DAY_COLORS.length)];
-                }
-                const groupColor = window.sessionColorMap[key];
-
                 const header = document.createElement('div');
                 header.className = 'date-header';
                 header.textContent = displayTitle;
@@ -336,7 +334,7 @@
                     const stackContainer = document.createElement('div');
                     stackContainer.className = 'card-stack';
 
-                    // 🎨 重置颜色选择器
+                    // 🎨 用于确保相邻不重复的临时变量
                     let lastColor = null;
 
                     groupNotes.forEach((note, index) => {
@@ -344,16 +342,25 @@
                         card.className = 'note-card';
                         card.id = 'note-' + note.id; 
                         
-                        // 🎲 随机选色逻辑：确保不与上一张相同
-                        let availableColors = DAY_COLORS;
-                        if (lastColor) {
-                            availableColors = DAY_COLORS.filter(c => c !== lastColor);
+                        // 🟢 核心修复逻辑：先查表，有就用；没有就生成并存表
+                        let assignedColor;
+                        if (noteColorMap[note.id]) {
+                            assignedColor = noteColorMap[note.id];
+                        } else {
+                            // 按照“不与上一张重复”的原则生成新颜色
+                            let availableColors = DAY_COLORS;
+                            if (lastColor) {
+                                availableColors = DAY_COLORS.filter(c => c !== lastColor);
+                            }
+                            assignedColor = availableColors[Math.floor(Math.random() * availableColors.length)];
+                            // 存入 Map
+                            noteColorMap[note.id] = assignedColor;
                         }
-                        const randomColor = availableColors[Math.floor(Math.random() * availableColors.length)];
                         
-                        card.style.backgroundColor = randomColor;
-                        lastColor = randomColor; 
+                        // 更新 lastColor，供下一次循环判断使用
+                        lastColor = assignedColor;
 
+                        card.style.backgroundColor = assignedColor;
                         card.style.zIndex = index + 1;
 
                         card.onclick = (e) => toggleActive(card, e);
@@ -386,7 +393,6 @@
                             card.appendChild(img);
                         }
 
-                        // 时间戳处理
                         const d = note.date ? new Date(note.date) : new Date(note.id);
                         const hours = d.getHours().toString().padStart(2, '0');
                         const minutes = d.getMinutes().toString().padStart(2, '0');
@@ -467,7 +473,6 @@
 
                 if (fileToUpload) displayImgUrl = URL.createObjectURL(fileToUpload);
 
-                // 🟢 关键修复：强制使用标准格式 YYYY-MM-DD HH:MM:SS
                 const now = new Date();
                 const year = now.getFullYear();
                 const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -535,7 +540,7 @@
                     method: 'PUT', headers: REQ_HEADERS, body: JSON.stringify(currentData)
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                localStorage.setItem('mylog_v68_final', JSON.stringify(currentData));
+                localStorage.setItem('mylog_v69_stable', JSON.stringify(currentData));
                 updateStatus('已同步 ✅');
             } catch (e) {
                 alert(`⚠️ 保存失败：${e.message}\n请检查 Key。`);

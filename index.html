@@ -65,8 +65,7 @@
             
             border-radius: 24px 24px 0 0;
             margin-top: -24px; 
-            /* 👇 更新：加深了堆叠时的向上阴影 */
-            box-shadow: 0 -3px 12px rgba(0,0,0,0.08); 
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.02); 
             padding-bottom: 40px; 
         }
 
@@ -78,8 +77,7 @@
         .card-stack .note-card:last-child {
             border-radius: 24px; 
             padding-bottom: 24px; 
-            /* 👇 更新：加深了最下方卡片的底部阴影 */
-            box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
         }
 
         .note-card:active { transform: scale(0.98); }
@@ -233,7 +231,7 @@
         // ==========================================
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$ebskDQwSsOfisis5TCXKdOHQ4LlGGnXpggBygD6/bcWPenwaHVAgi';
-        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';  
+        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';   
         // ==========================================
 
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -249,14 +247,14 @@
         let isInputOpen = false;
         let draftText = "";
         
-        // 🎨 新配色 (6组) - v6.8
+        // 🎨 配色方案 (6组莫兰迪灰调)
         const DAY_COLORS = [
-            'rgb(239, 217, 196)', // 1
-            'rgb(207, 229, 212)', // 2
-            'rgb(253, 214, 209)', // 3
-            'rgb(204, 222, 236)', // 4
-            'rgb(206, 198, 236)', // 5
-            'rgb(212, 212, 212)'  // 6
+            'rgb(239, 217, 196)', 
+            'rgb(207, 229, 212)', 
+            'rgb(253, 214, 209)', 
+            'rgb(204, 222, 236)', 
+            'rgb(204, 222, 236)', 
+            'rgb(212, 212, 212)'  
         ];
 
         // 🆔 --- 身份初始化 ---
@@ -267,7 +265,7 @@
         }
 
         async function loadData() {
-            const localCache = localStorage.getItem('mylog_v69_shadow'); 
+            const localCache = localStorage.getItem('mylog_v68_final'); 
             if (localCache) {
                 currentData = JSON.parse(localCache);
                 renderTimeline();
@@ -277,7 +275,7 @@
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
                 currentData = json.record;
-                localStorage.setItem('mylog_v69_shadow', JSON.stringify(currentData));
+                localStorage.setItem('mylog_v68_final', JSON.stringify(currentData));
                 renderTimeline();
             } catch (e) {
                 console.error(e);
@@ -313,6 +311,12 @@
             sortedKeys.forEach(key => {
                 const isToday = (key === realTodayKey);
                 const displayTitle = isToday ? "Today" : key;
+
+                if (!window.sessionColorMap) window.sessionColorMap = {};
+                if (!window.sessionColorMap[key]) {
+                    window.sessionColorMap[key] = DAY_COLORS[Math.floor(Math.random() * DAY_COLORS.length)];
+                }
+                const groupColor = window.sessionColorMap[key];
 
                 const header = document.createElement('div');
                 header.className = 'date-header';
@@ -382,6 +386,7 @@
                             card.appendChild(img);
                         }
 
+                        // 时间戳处理
                         const d = note.date ? new Date(note.date) : new Date(note.id);
                         const hours = d.getHours().toString().padStart(2, '0');
                         const minutes = d.getMinutes().toString().padStart(2, '0');
@@ -462,8 +467,16 @@
 
                 if (fileToUpload) displayImgUrl = URL.createObjectURL(fileToUpload);
 
+                // 🟢 关键修复：强制使用标准格式 YYYY-MM-DD HH:MM:SS
                 const now = new Date();
-                const fullTime = now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                
+                const fullTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
                 const newNote = {
                     id: tempId, text: text, img: displayImgUrl, date: fullTime,
@@ -522,7 +535,7 @@
                     method: 'PUT', headers: REQ_HEADERS, body: JSON.stringify(currentData)
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                localStorage.setItem('mylog_v69_shadow', JSON.stringify(currentData));
+                localStorage.setItem('mylog_v68_final', JSON.stringify(currentData));
                 updateStatus('已同步 ✅');
             } catch (e) {
                 alert(`⚠️ 保存失败：${e.message}\n请检查 Key。`);

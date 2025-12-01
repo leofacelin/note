@@ -26,27 +26,21 @@
             display: flex; flex-direction: column;
         }
 
-        /* 顶部栏容器：现在包含两个按钮 */
         #top-bar-container {
             max-width: 600px; margin: 0 auto; position: sticky; top: 20px; z-index: 1000;
             display: flex; justify-content: flex-end; pointer-events: none; height: 0; overflow: visible; 
-            gap: 12px; /* 按钮之间的间距 */
             width: 100%;
         }
 
-        /* 通用悬浮按钮样式 */
-        .fab-btn {
+        .fab-add {
             pointer-events: auto; width: 56px; height: 56px;
             background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer;
-            transition: transform 0.2s; margin-top: 10px; 
+            transition: transform 0.2s; margin-top: 10px; margin-right: 10px; 
         }
-        .fab-btn:active { transform: scale(0.9); }
-        .fab-btn svg { width: 28px; height: 28px; fill: #333; }
-
-        /* 特殊：魔法按钮的样式 */
-        .fab-magic svg { fill: #9c27b0; } /* 紫色魔法棒 */
+        .fab-add:active { transform: scale(0.9); }
+        .fab-add svg { width: 32px; height: 32px; fill: #333; }
 
         #timeline-container { 
             max-width: 600px; margin: 0 auto; padding-top: 20px; width: 100%; flex: 1; 
@@ -182,10 +176,7 @@
 <body>
 
     <div id="top-bar-container">
-        <div class="fab-btn fab-magic" onclick="fetchAiInspiration()">
-            <svg viewBox="0 0 24 24"><path d="M7.5 5.6L10 7 8.6 4.5 10 2 7.5 3.4 5 2 6.4 4.5 5 7zM19.5 5.6L17 7 18.4 4.5 17 2 19.5 3.4 22 2 20.6 4.5 22 7zM14.3 8.3L11 12l3.3 3.7 3-3.3zM16 12l-2.2-2.5-3.3-3.7L8 8.3l7.5 8.5L20 12z"/></svg>
-        </div>
-        <div class="fab-btn fab-add" onclick="toggleInput()">
+        <div class="fab-add" onclick="toggleInput()">
             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         </div>
     </div>
@@ -215,10 +206,7 @@
         // ==========================================
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$ebskDQwSsOfisis5TCXKdOHQ4LlGGnXpggBygD6/bcWPenwaHVAgi';
-        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';     
-        
-        // 🤖 填入刚才测试成功的 Gemini API Key
-        const GEMINI_API_KEY = 'AIzaSyDMnO9K1LMN3dANJX8EhyOjk2kCDvV-0Qs'; 
+        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';      
         // ==========================================
 
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -234,9 +222,14 @@
         let isInputOpen = false;
         let draftText = "";
         
+        // 🎨 v1.1 莫兰迪灰调 (6组)
         const DAY_COLORS = [
-            'rgb(161, 230, 176)', 'rgb(255, 209, 166)', 'rgb(155, 188, 255)', 
-            'rgb(255, 193, 193)', 'rgb(228, 194, 120)', 'rgb(237, 236, 123)'  
+            'rgb(239, 217, 196)', 
+            'rgb(207, 229, 212)', 
+            'rgb(253, 214, 209)', 
+            'rgb(204, 222, 236)', 
+            'rgb(206, 198, 236)', 
+            'rgb(212, 212, 212)'  
         ];
 
         let myUserId = localStorage.getItem('zinebonote_user_id');
@@ -274,14 +267,17 @@
 
             notes.forEach(note => {
                 const d = note.date ? new Date(note.date) : new Date(note.id);
-                // 兼容逻辑：如果是 YYYY-MM-DD HH:MM:SS 格式，解析它
-                // 如果解析失败(Date Invalid)，尝试 fallback
+                // 兼容逻辑：处理带时间的格式
                 let dateKey;
-                if(isNaN(d.getTime())) {
+                if(note.date && note.date.includes(' ') && !isNaN(Date.parse(note.date))) {
+                    dateKey = formatDate(d, true);
+                } else if(isNaN(d.getTime())) {
                     // 尝试手动解析 YYYY-MM-DD
-                    const parts = note.date.split(' ')[0].split('-');
-                    dateKey = `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(parts[1])-1]}.${parseInt(parts[2])}`;
-                    if(dateKey === formatDate(new Date(), true)) dateKey = "Today";
+                    try {
+                        const parts = note.date.split(' ')[0].split('-');
+                        dateKey = `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(parts[1])-1]}.${parseInt(parts[2])}`;
+                        if(dateKey === formatDate(new Date(), true)) dateKey = "Today";
+                    } catch(e) { dateKey = "Unknown"; }
                 } else {
                     dateKey = formatDate(d, true);
                 }
@@ -294,7 +290,6 @@
             if (notes.length > 0) {
                  const keySet = new Set();
                  keySet.add(realTodayKey);
-                 // 简单的重构 key 收集，实际应该按时间排序
                  Object.keys(groups).forEach(k => keySet.add(k));
                  sortedKeys = Array.from(keySet);
             } else {
@@ -304,6 +299,12 @@
             sortedKeys.forEach(key => {
                 const isToday = (key === realTodayKey);
                 const displayTitle = isToday ? "Today" : key;
+
+                if (!window.sessionColorMap) window.sessionColorMap = {};
+                if (!window.sessionColorMap[key]) {
+                    window.sessionColorMap[key] = DAY_COLORS[Math.floor(Math.random() * DAY_COLORS.length)];
+                }
+                const groupColor = window.sessionColorMap[key];
 
                 const header = document.createElement('div');
                 header.className = 'date-header';
@@ -363,10 +364,9 @@
 
                         let timeStr = "";
                         try {
-                            // 尝试解析 YYYY-MM-DD HH:MM:SS
                             if(note.date && note.date.includes(' ')) {
-                                const timePart = note.date.split(' ')[1]; // HH:MM:SS
-                                timeStr = timePart.substring(0, 5); // HH:MM
+                                const timePart = note.date.split(' ')[1]; 
+                                timeStr = timePart.substring(0, 5); 
                             } else {
                                 const d = new Date(note.id);
                                 timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -383,77 +383,6 @@
                     container.appendChild(stackContainer);
                 }
             });
-        }
-
-        // --- 🤖 AI 灵感雷达核心逻辑 ---
-        async function fetchAiInspiration() {
-            if(!GEMINI_API_KEY.startsWith('AIza')) {
-                alert('请先在代码中填入有效的 Gemini API Key');
-                return;
-            }
-
-            updateStatus("正在连接宇宙信号...");
-            
-            try {
-                const prompt = `
-                    你是一个敏锐的视觉设计观察家。
-                    请分享一个最近（或近期非常前沿）的、关于“平面设计”中比较冷门且有趣的案例或新闻，尽量避开AI相关的信息。
-                    要求：
-                    1. 语言：中文，幽默风趣，口语化。
-                    2. 字数：80字以内。
-                    3. 格式：严格返回纯 JSON 格式，格式如下：
-                    { "title": "...", "content": "...", "keyword": "..." }
-                `;
-
-                // 使用验证过的 2.5-flash 模型
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-
-                const data = await response.json();
-                
-                if (data.error) throw new Error(data.error.message);
-                if (!data.candidates) throw new Error("AI 未返回内容");
-
-                let rawText = data.candidates[0].content.parts[0].text;
-                rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                const result = JSON.parse(rawText);
-
-                // 自动生成配图 URL
-                const aiImgUrl = `https://image.pollinations.ai/prompt/${result.keyword} minimalist,tech,high quality?width=600&height=400&nologo=true`;
-
-                updateStatus("灵感已捕获，正在入库...");
-
-                // 构造笔记对象
-                const tempId = Date.now();
-                const now = new Date();
-                const fullTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-
-                const newNote = {
-                    id: tempId,
-                    text: `【${result.title}】\n${result.content}`,
-                    img: aiImgUrl,
-                    date: fullTime,
-                    creatorId: myUserId
-                };
-
-                // 存入数据并保存
-                if (!currentData.notes) currentData.notes = [];
-                currentData.notes.push(newNote);
-                
-                renderTimeline();
-                await saveData();
-                updateStatus("✨ 灵感已送达！");
-
-            } catch (error) {
-                console.error(error);
-                updateStatus("灵感抓取失败");
-                alert("AI 报错: " + error.message);
-            }
         }
 
         function renderInputCard(wrapper) {

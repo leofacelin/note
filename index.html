@@ -20,35 +20,36 @@
             background-color: #f0f0f0; 
             font-family: 'Rubik', "Source Han Sans CN", "Noto Sans SC", sans-serif;
             margin: 0;
-            padding: 0 10px 40px 10px; /* 底部 padding 稍微减小，交给 footer */
+            padding: 0 10px 40px 10px; 
             color: #333;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
         }
 
+        /* 顶部栏容器：现在包含两个按钮 */
         #top-bar-container {
             max-width: 600px; margin: 0 auto; position: sticky; top: 20px; z-index: 1000;
             display: flex; justify-content: flex-end; pointer-events: none; height: 0; overflow: visible; 
+            gap: 12px; /* 按钮之间的间距 */
             width: 100%;
         }
 
-        .fab-add {
+        /* 通用悬浮按钮样式 */
+        .fab-btn {
             pointer-events: auto; width: 56px; height: 56px;
             background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.15); cursor: pointer;
-            transition: transform 0.2s; margin-top: 10px; margin-right: 10px; 
+            transition: transform 0.2s; margin-top: 10px; 
         }
-        .fab-add:active { transform: scale(0.9); }
-        .fab-add svg { width: 32px; height: 32px; fill: #333; }
+        .fab-btn:active { transform: scale(0.9); }
+        .fab-btn svg { width: 28px; height: 28px; fill: #333; }
+
+        /* 特殊：魔法按钮的样式 */
+        .fab-magic svg { fill: #9c27b0; } /* 紫色魔法棒 */
 
         #timeline-container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            padding-top: 20px; 
-            width: 100%;
-            flex: 1; /* 让内容撑开 */
+            max-width: 600px; margin: 0 auto; padding-top: 20px; width: 100%; flex: 1; 
         }
 
         .date-header {
@@ -58,57 +59,27 @@
             padding-left: 5px; 
         }
 
-        /* --- 🌈 核心堆叠样式 --- */
-        .card-stack {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 20px; 
-        }
+        .card-stack { display: flex; flex-direction: column; margin-bottom: 20px; }
 
         .note-card {
-            background-color: #fff; 
-            padding: 24px;
-            position: relative;
-            cursor: pointer; 
+            background-color: #fff; padding: 24px; position: relative; cursor: pointer; 
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            
-            border-radius: 24px 24px 0 0;
-            margin-top: -24px; 
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.02); 
-            padding-bottom: 40px; 
+            border-radius: 24px 24px 0 0; margin-top: -24px; 
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.02); padding-bottom: 40px; 
         }
-
-        .card-stack .note-card:first-child {
-            margin-top: 0;
-            box-shadow: none; 
-        }
-
-        .card-stack .note-card:last-child {
-            border-radius: 24px; 
-            padding-bottom: 24px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
-        }
-
+        .card-stack .note-card:first-child { margin-top: 0; box-shadow: none; }
+        .card-stack .note-card:last-child { border-radius: 24px; padding-bottom: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
         .note-card:active { transform: scale(0.98); }
-
-        .note-card.deleting {
-            opacity: 0; transform: scale(0.9); margin-bottom: -100px; z-index: -1;
-        }
+        .note-card.deleting { opacity: 0; transform: scale(0.9); margin-bottom: -100px; z-index: -1; }
 
         .note-content {
-            font-size: 20px; font-weight: 400; 
-            line-height: 1.5; color: #222;
+            font-size: 20px; font-weight: 400; line-height: 1.5; color: #222;
             word-break: break-all; white-space: pre-wrap;
         }
 
-        /* 时间戳 (0.2 透明度) */
         .note-timestamp {
-            font-size: 10px;
-            text-align: right;
-            margin-top: 8px;
-            color: rgba(0, 0, 0, 0.2); 
-            font-weight: 500;
-            letter-spacing: 0.5px;
+            font-size: 10px; text-align: right; margin-top: 8px; color: rgba(0, 0, 0, 0.2); 
+            font-weight: 500; letter-spacing: 0.5px;
         }
 
         .note-img {
@@ -118,18 +89,12 @@
 
         .btn-delete {
             position: absolute; top: 12px; right: 12px; width: 32px; height: 32px;
-            background: rgba(255,255,255,0.5); 
-            backdrop-filter: blur(4px);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.5); backdrop-filter: blur(4px);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
             cursor: pointer; color: #555; font-size: 18px; font-weight: bold;
-            z-index: 10; opacity: 0;
-            transform: scale(0.8); transition: all 0.2s; pointer-events: none; 
+            z-index: 10; opacity: 0; transform: scale(0.8); transition: all 0.2s; pointer-events: none; 
         }
-
-        @media (hover: hover) {
-            .note-card:hover .btn-delete { opacity: 1; transform: scale(1); pointer-events: auto; }
-        }
+        @media (hover: hover) { .note-card:hover .btn-delete { opacity: 1; transform: scale(1); pointer-events: auto; } }
         .note-card.active .btn-delete { opacity: 1; transform: scale(1); pointer-events: auto; }
 
         #input-card-container {
@@ -207,15 +172,9 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-        /* 👇 新增：页脚样式 */
         .app-footer {
-            text-align: center;
-            font-size: 11px;
-            color: #999;
-            padding: 40px 0 20px 0;
-            font-family: 'Rubik', sans-serif;
-            opacity: 0.6;
-            margin-top: auto; /* 推到底部 */
+            text-align: center; font-size: 11px; color: #999; padding: 40px 0 20px 0;
+            font-family: 'Rubik', sans-serif; opacity: 0.6; margin-top: auto; 
         }
 
     </style>
@@ -223,7 +182,10 @@
 <body>
 
     <div id="top-bar-container">
-        <div class="fab-add" onclick="toggleInput()">
+        <div class="fab-btn fab-magic" onclick="fetchAiInspiration()">
+            <svg viewBox="0 0 24 24"><path d="M7.5 5.6L10 7 8.6 4.5 10 2 7.5 3.4 5 2 6.4 4.5 5 7zM19.5 5.6L17 7 18.4 4.5 17 2 19.5 3.4 22 2 20.6 4.5 22 7zM14.3 8.3L11 12l3.3 3.7 3-3.3zM16 12l-2.2-2.5-3.3-3.7L8 8.3l7.5 8.5L20 12z"/></svg>
+        </div>
+        <div class="fab-btn fab-add" onclick="toggleInput()">
             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         </div>
     </div>
@@ -254,6 +216,9 @@
         const BIN_ID = '692adac043b1c97be9cca688'; 
         const API_KEY = '$2a$10$ebskDQwSsOfisis5TCXKdOHQ4LlGGnXpggBygD6/bcWPenwaHVAgi';
         const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';     
+        
+        // 🤖 填入刚才测试成功的 Gemini API Key
+        const GEMINI_API_KEY = 'AIzaSyDMnO9K1LMN3dANJX8EhyOjk2kCDvV-0Qs'; 
         // ==========================================
 
         const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
@@ -269,25 +234,19 @@
         let isInputOpen = false;
         let draftText = "";
         
-        // 🎨 莫兰迪灰调 (6组)
         const DAY_COLORS = [
-            'rgb(239, 217, 196)', 
-            'rgb(207, 229, 212)', 
-            'rgb(253, 214, 209)', 
-            'rgb(204, 222, 236)', 
-            'rgb(204, 222, 236)', 
-            'rgb(212, 212, 212)'  
+            'rgb(161, 230, 176)', 'rgb(255, 209, 166)', 'rgb(155, 188, 255)', 
+            'rgb(255, 193, 193)', 'rgb(228, 194, 120)', 'rgb(237, 236, 123)'  
         ];
 
-        // 🆔 --- 身份初始化 ---
-        let myUserId = localStorage.getItem('mylog_user_id');
+        let myUserId = localStorage.getItem('zinebonote_user_id');
         if (!myUserId) {
             myUserId = 'u_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-            localStorage.setItem('mylog_user_id', myUserId);
+            localStorage.setItem('zinebonote_user_id', myUserId);
         }
 
         async function loadData() {
-            const localCache = localStorage.getItem('mylog_v69_stable'); 
+            const localCache = localStorage.getItem('zinebonote_v1_data'); 
             if (localCache) {
                 currentData = JSON.parse(localCache);
                 renderTimeline();
@@ -297,7 +256,7 @@
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
                 currentData = json.record;
-                localStorage.setItem('mylog_v69_stable', JSON.stringify(currentData));
+                localStorage.setItem('zinebonote_v1_data', JSON.stringify(currentData));
                 renderTimeline();
             } catch (e) {
                 console.error(e);
@@ -315,7 +274,18 @@
 
             notes.forEach(note => {
                 const d = note.date ? new Date(note.date) : new Date(note.id);
-                const dateKey = formatDate(d, true);
+                // 兼容逻辑：如果是 YYYY-MM-DD HH:MM:SS 格式，解析它
+                // 如果解析失败(Date Invalid)，尝试 fallback
+                let dateKey;
+                if(isNaN(d.getTime())) {
+                    // 尝试手动解析 YYYY-MM-DD
+                    const parts = note.date.split(' ')[0].split('-');
+                    dateKey = `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(parts[1])-1]}.${parseInt(parts[2])}`;
+                    if(dateKey === formatDate(new Date(), true)) dateKey = "Today";
+                } else {
+                    dateKey = formatDate(d, true);
+                }
+                
                 if (!groups[dateKey]) groups[dateKey] = [];
                 groups[dateKey].push(note);
             });
@@ -324,7 +294,8 @@
             if (notes.length > 0) {
                  const keySet = new Set();
                  keySet.add(realTodayKey);
-                 notes.forEach(n => keySet.add(formatDate(n.date?new Date(n.date):new Date(n.id), true)));
+                 // 简单的重构 key 收集，实际应该按时间排序
+                 Object.keys(groups).forEach(k => keySet.add(k));
                  sortedKeys = Array.from(keySet);
             } else {
                 sortedKeys = [realTodayKey];
@@ -333,12 +304,6 @@
             sortedKeys.forEach(key => {
                 const isToday = (key === realTodayKey);
                 const displayTitle = isToday ? "Today" : key;
-
-                if (!window.sessionColorMap) window.sessionColorMap = {};
-                if (!window.sessionColorMap[key]) {
-                    window.sessionColorMap[key] = DAY_COLORS[Math.floor(Math.random() * DAY_COLORS.length)];
-                }
-                const groupColor = window.sessionColorMap[key];
 
                 const header = document.createElement('div');
                 header.className = 'date-header';
@@ -357,8 +322,6 @@
                 if (groupNotes.length > 0) {
                     const stackContainer = document.createElement('div');
                     stackContainer.className = 'card-stack';
-
-                    // 🎨 重置颜色选择器
                     let lastColor = null;
 
                     groupNotes.forEach((note, index) => {
@@ -366,18 +329,14 @@
                         card.className = 'note-card';
                         card.id = 'note-' + note.id; 
                         
-                        // 🎲 随机选色逻辑
                         let availableColors = DAY_COLORS;
-                        if (lastColor) {
-                            availableColors = DAY_COLORS.filter(c => c !== lastColor);
-                        }
+                        if (lastColor) availableColors = DAY_COLORS.filter(c => c !== lastColor);
                         const randomColor = availableColors[Math.floor(Math.random() * availableColors.length)];
                         
                         card.style.backgroundColor = randomColor;
                         lastColor = randomColor; 
 
                         card.style.zIndex = index + 1;
-
                         card.onclick = (e) => toggleActive(card, e);
 
                         const canDelete = (!note.creatorId) || (note.creatorId === myUserId);
@@ -385,10 +344,7 @@
                             const delBtn = document.createElement('div');
                             delBtn.className = 'btn-delete';
                             delBtn.textContent = '×';
-                            delBtn.onclick = (e) => {
-                                e.stopPropagation(); 
-                                showDeleteModal(note.id);
-                            }
+                            delBtn.onclick = (e) => { e.stopPropagation(); showDeleteModal(note.id); }
                             card.appendChild(delBtn);
                         }
 
@@ -401,36 +357,109 @@
                             const img = document.createElement('img');
                             img.className = 'note-img';
                             img.src = note.img; 
-                            img.onclick = (e) => {
-                                e.stopPropagation();
-                                openImageViewer(note.img);
-                            }
+                            img.onclick = (e) => { e.stopPropagation(); openImageViewer(note.img); }
                             card.appendChild(img);
                         }
 
-                        // 时间戳处理
-                        const d = note.date ? new Date(note.date) : new Date(note.id);
-                        const hours = d.getHours().toString().padStart(2, '0');
-                        const minutes = d.getMinutes().toString().padStart(2, '0');
-                        
+                        let timeStr = "";
+                        try {
+                            // 尝试解析 YYYY-MM-DD HH:MM:SS
+                            if(note.date && note.date.includes(' ')) {
+                                const timePart = note.date.split(' ')[1]; // HH:MM:SS
+                                timeStr = timePart.substring(0, 5); // HH:MM
+                            } else {
+                                const d = new Date(note.id);
+                                timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                            }
+                        } catch(e) {}
+
                         const timeDiv = document.createElement('div');
                         timeDiv.className = 'note-timestamp';
-                        timeDiv.textContent = `${hours}:${minutes}`;
+                        timeDiv.textContent = timeStr;
                         card.appendChild(timeDiv);
                         
                         stackContainer.appendChild(card);
                     });
-                    
                     container.appendChild(stackContainer);
                 }
             });
+        }
+
+        // --- 🤖 AI 灵感雷达核心逻辑 ---
+        async function fetchAiInspiration() {
+            if(!GEMINI_API_KEY.startsWith('AIza')) {
+                alert('请先在代码中填入有效的 Gemini API Key');
+                return;
+            }
+
+            updateStatus("正在连接宇宙信号...");
+            
+            try {
+                const prompt = `
+                    你是一个敏锐的科技和设计观察家。
+                    请分享一个最近（或近期非常前沿）的、关于“设计、黑科技、商业模式”中比较冷门且有趣的案例或新闻。
+                    要求：
+                    1. 语言：中文，幽默风趣，口语化。
+                    2. 字数：80字以内。
+                    3. 格式：严格返回纯 JSON 格式，格式如下：
+                    { "title": "...", "content": "...", "keyword": "..." }
+                `;
+
+                // 使用验证过的 2.5-flash 模型
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error.message);
+                if (!data.candidates) throw new Error("AI 未返回内容");
+
+                let rawText = data.candidates[0].content.parts[0].text;
+                rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const result = JSON.parse(rawText);
+
+                // 自动生成配图 URL
+                const aiImgUrl = `https://image.pollinations.ai/prompt/${result.keyword} minimalist,tech,high quality?width=600&height=400&nologo=true`;
+
+                updateStatus("灵感已捕获，正在入库...");
+
+                // 构造笔记对象
+                const tempId = Date.now();
+                const now = new Date();
+                const fullTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+
+                const newNote = {
+                    id: tempId,
+                    text: `【${result.title}】\n${result.content}`,
+                    img: aiImgUrl,
+                    date: fullTime,
+                    creatorId: myUserId
+                };
+
+                // 存入数据并保存
+                if (!currentData.notes) currentData.notes = [];
+                currentData.notes.push(newNote);
+                
+                renderTimeline();
+                await saveData();
+                updateStatus("✨ 灵感已送达！");
+
+            } catch (error) {
+                console.error(error);
+                updateStatus("灵感抓取失败");
+                alert("AI 报错: " + error.message);
+            }
         }
 
         function renderInputCard(wrapper) {
             wrapper.innerHTML = `
                 <div id="input-card-container" style="display: flex;">
                     <textarea id="inputBox" placeholder="记录此刻..." oninput="draftText = this.value">${draftText}</textarea>
-                    
                     <div class="input-actions">
                         <div class="action-btn btn-upload" onclick="document.getElementById('fileInput').click()">
                             <div style="position:relative;">
@@ -444,17 +473,8 @@
                     </div>
                 </div>
             `;
-            if(selectedFile) {
-                const dot = document.getElementById('img-dot');
-                if(dot) dot.style.display = 'block';
-            }
-            setTimeout(() => {
-                const box = document.getElementById('inputBox');
-                if(box) {
-                    box.focus();
-                    box.setSelectionRange(box.value.length, box.value.length);
-                }
-            }, 100);
+            if(selectedFile) document.getElementById('img-dot').style.display = 'block';
+            setTimeout(() => { const box = document.getElementById('inputBox'); if(box) box.focus(); }, 100);
         }
 
         function handleFileSelect() {
@@ -462,10 +482,8 @@
             const file = fileInput.files[0];
             if (file) {
                 selectedFile = file;
-                const dot = document.getElementById('img-dot');
-                if(dot) dot.style.display = 'block';
-                const box = document.getElementById('inputBox');
-                if(box) box.focus();
+                document.getElementById('img-dot').style.display = 'block';
+                document.getElementById('inputBox').focus();
             }
         }
 
@@ -479,29 +497,17 @@
 
                 if (!text && !fileToUpload) { updateStatus('写点什么吧'); return; }
 
-                if(btnSave) {
-                    btnSave.classList.add('loading');
-                    btnSave.style.opacity = '0.5';
-                }
+                if(btnSave) { btnSave.classList.add('loading'); btnSave.style.opacity = '0.5'; }
 
                 const tempId = Date.now();
                 let displayImgUrl = null;
-
                 if (fileToUpload) displayImgUrl = URL.createObjectURL(fileToUpload);
 
                 const now = new Date();
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const seconds = String(now.getSeconds()).padStart(2, '0');
-                
-                const fullTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                const fullTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 
                 const newNote = {
-                    id: tempId, text: text, img: displayImgUrl, date: fullTime,
-                    creatorId: myUserId 
+                    id: tempId, text: text, img: displayImgUrl, date: fullTime, creatorId: myUserId 
                 };
 
                 if (!currentData.notes) currentData.notes = [];
@@ -529,87 +535,54 @@
                     updateStatus('正在保存...');
                     await saveData(); 
                 }
-            } catch (err) {
-                alert("程序出错: " + err.message);
-            } finally {
-                if(btnSave) { btnSave.classList.remove('loading'); btnSave.style.opacity = '1'; }
-            }
+            } catch (err) { alert("程序出错: " + err.message); } 
+            finally { if(btnSave) { btnSave.classList.remove('loading'); btnSave.style.opacity = '1'; } }
         }
 
         async function uploadImage(file) {
             const formData = new FormData();
             formData.append('image', file);
             try {
-                const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
-                    method: 'POST', body: formData
-                });
+                const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method: 'POST', body: formData });
                 const data = await res.json();
                 return data.success ? data.data.url : null;
-            } catch (e) {
-                return null;
-            }
+            } catch (e) { return null; }
         }
 
         async function saveData() {
             try {
-                const res = await fetch(API_URL, {
-                    method: 'PUT', headers: REQ_HEADERS, body: JSON.stringify(currentData)
-                });
+                const res = await fetch(API_URL, { method: 'PUT', headers: REQ_HEADERS, body: JSON.stringify(currentData) });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                localStorage.setItem('mylog_v69_stable', JSON.stringify(currentData));
+                localStorage.setItem('zinebonote_v1_data', JSON.stringify(currentData));
                 updateStatus('已同步 ✅');
-            } catch (e) {
-                alert(`⚠️ 保存失败：${e.message}\n请检查 Key。`);
-                updateStatus('保存失败');
-            }
+            } catch (e) { alert(`⚠️ 保存失败：${e.message}`); updateStatus('保存失败'); }
         }
 
-        function toggleInput() {
-            isInputOpen = !isInputOpen;
-            renderTimeline();
-        }
-
+        function toggleInput() { isInputOpen = !isInputOpen; renderTimeline(); }
         function toggleActive(card, e) {
             if (e.target.closest('#input-card-container')) return;
             const wasActive = card.classList.contains('active');
             document.querySelectorAll('.note-card.active').forEach(c => c.classList.remove('active'));
             if (!wasActive) card.classList.add('active');
         }
-
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.note-card')) {
-                document.querySelectorAll('.note-card.active').forEach(c => c.classList.remove('active'));
-            }
-        });
+        document.addEventListener('click', function(e) { if (!e.target.closest('.note-card')) document.querySelectorAll('.note-card.active').forEach(c => c.classList.remove('active')); });
 
         function showDeleteModal(id) {
             pendingDeleteId = id;
             document.getElementById('modalOverlay').style.display = 'block';
             document.getElementById('confirmModal').style.display = 'block';
         }
-
         async function confirmDelete() {
             if (!pendingDeleteId) return;
-            
             const idToDelete = pendingDeleteId;
             document.getElementById('modalOverlay').style.display = 'none';
             document.getElementById('confirmModal').style.display = 'none';
-
             const cardEl = document.getElementById('note-' + idToDelete);
-            if (cardEl) {
-                cardEl.classList.add('deleting');
-                await new Promise(resolve => setTimeout(resolve, 300));
-            }
-
+            if (cardEl) { cardEl.classList.add('deleting'); await new Promise(resolve => setTimeout(resolve, 300)); }
             const idx = currentData.notes.findIndex(n => n.id === idToDelete);
-            if (idx > -1) {
-                currentData.notes.splice(idx, 1);
-                renderTimeline();
-                saveData(); 
-            }
+            if (idx > -1) { currentData.notes.splice(idx, 1); renderTimeline(); saveData(); }
             pendingDeleteId = null;
         }
-
         function closeModal() {
             document.getElementById('modalOverlay').style.display = 'none';
             document.getElementById('confirmModal').style.display = 'none';
@@ -618,35 +591,21 @@
 
         let statusTimeout = null;
         function updateStatus(msg) {
-            const el = document.getElementById('statusMsg');
-            el.textContent = msg;
-            el.classList.add('show');
+            const el = document.getElementById('statusMsg'); el.textContent = msg; el.classList.add('show');
             if(statusTimeout) clearTimeout(statusTimeout);
             statusTimeout = setTimeout(() => el.classList.remove('show'), 2000);
         }
 
         function formatDate(dateObj, forComparison = false) {
             const now = new Date();
-            const isSameDay = (dateObj.getDate() === now.getDate() && 
-                               dateObj.getMonth() === now.getMonth() && 
-                               dateObj.getFullYear() === now.getFullYear());
+            const isSameDay = (dateObj.getDate() === now.getDate() && dateObj.getMonth() === now.getMonth() && dateObj.getFullYear() === now.getFullYear());
             if (isSameDay && !forComparison) return "Today"; 
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             return `${monthNames[dateObj.getMonth()]}.${dateObj.getDate()}`;
         }
 
-        function openImageViewer(src) {
-            const modal = document.getElementById('imageViewerModal');
-            const img = document.getElementById('expandedImage');
-            img.src = src;
-            modal.style.display = 'flex';
-        }
-
-        function closeImageViewer() {
-            const modal = document.getElementById('imageViewerModal');
-            modal.style.display = 'none';
-            document.getElementById('expandedImage').src = '';
-        }
+        function openImageViewer(src) { document.getElementById('expandedImage').src = src; document.getElementById('imageViewerModal').style.display = 'flex'; }
+        function closeImageViewer() { document.getElementById('imageViewerModal').style.display = 'none'; document.getElementById('expandedImage').src = ''; }
 
         loadData();
     </script>

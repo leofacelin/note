@@ -26,6 +26,9 @@
             --fab-bg: rgba(255,255,255,0.9);
             --fab-icon: #333;
             --toggle-btn-color: #999;
+            /* --tag-color 变量不再使用，直接在类中定义颜色 */
+            --filter-banner-bg: #333;
+            --filter-banner-text: #fff;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -40,6 +43,8 @@
                 --fab-bg: rgba(40,40,40,0.9);
                 --fab-icon: #fff;
                 --toggle-btn-color: #666;
+                --filter-banner-bg: #444;
+                --filter-banner-text: #fff;
             }
         }
 
@@ -77,11 +82,22 @@
         #btn-export { display: none; margin-right: 10px; background: #4a90e2; }
         #btn-export svg { fill: #fff; }
 
+        /* 🔍 过滤状态横幅 */
+        #filter-banner {
+            display: none; max-width: 600px; margin: 10px auto 0 auto;
+            background: var(--filter-banner-bg); color: var(--filter-banner-text);
+            padding: 10px 20px; border-radius: 30px; font-size: 14px; font-weight: 500;
+            align-items: center; justify-content: space-between;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); animation: slideUp 0.3s ease-out;
+            cursor: pointer; z-index: 900;
+        }
+        #filter-banner span { display: flex; align-items: center; }
+        #filter-banner .clear-icon { margin-left: 10px; font-size: 16px; opacity: 0.8; }
+
         #timeline-container { 
             max-width: 600px; margin: 0 auto; padding-top: 20px; width: 100%; flex: 1; 
         }
 
-        /* 📅 月份分割线 */
         .month-divider {
             display: flex; align-items: center; justify-content: center;
             margin: 40px 0 10px 0; opacity: 0.6;
@@ -92,7 +108,6 @@
             border: 1px solid var(--divider-color); border-radius: 20px;
         }
 
-        /* 📅 日期标题栏 */
         .date-header-wrapper {
             display: flex; align-items: center; justify-content: space-between;
             margin: 30px 0 15px 0;
@@ -106,7 +121,6 @@
             transition: color 0.3s ease;
         }
 
-        /* 🔽 折叠按钮 */
         .toggle-btn {
             width: 32px; height: 32px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
@@ -115,7 +129,6 @@
         }
         .toggle-btn svg { width: 24px; height: 24px; fill: var(--toggle-btn-color); }
         .toggle-btn:active { background: rgba(0,0,0,0.05); }
-        
         .toggle-btn.collapsed { transform: rotate(-90deg); }
 
         .card-stack { 
@@ -125,7 +138,6 @@
         }
         .card-stack.hidden-stack { display: none; }
 
-        /* ✨ 动画定义 */
         @keyframes slideUp {
             from { opacity: 0; transform: translateY(20px) scale(0.95); }
             to { opacity: 1; transform: translateY(0) scale(1); }
@@ -158,6 +170,17 @@
             word-break: break-all; white-space: pre-wrap;
         }
 
+        /* 🏷️ 标签样式修改：11px 浅灰色 */
+        .tag-link {
+            color: #999;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            margin-right: 2px;
+        }
+        .tag-link:hover { text-decoration: underline; color: #666; }
+
         .note-timestamp {
             font-size: 11px; text-align: right; margin-top: 10px; color: var(--timestamp-color); 
             font-weight: 500; letter-spacing: 0.5px;
@@ -178,10 +201,7 @@
         @media (hover: hover) { .note-card:hover .btn-delete { opacity: 1; transform: scale(1); pointer-events: auto; } }
         .note-card.active .btn-delete { opacity: 1; transform: scale(1); pointer-events: auto; }
 
-        /* 输入框容器 */
-        #input-wrapper {
-            margin-bottom: 10px; /* 预留位置 */
-        }
+        #input-wrapper { margin-bottom: 10px; }
 
         #input-card-container {
             display: none; background: var(--card-bg-default); border-radius: 24px; padding: 20px;
@@ -278,6 +298,11 @@
             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         </div>
     </div>
+    
+    <div id="filter-banner" onclick="clearFilter()">
+        <span id="filter-text">Filtering by tag</span>
+        <span class="clear-icon">✕</span>
+    </div>
 
     <div id="statusMsg">准备就绪</div>
 
@@ -319,6 +344,7 @@
         let selectedFile = null;
         let isInputOpen = false;
         let draftText = "";
+        let activeTag = null; // 🏷️ 当前激活的标签
         
         const DAY_COLORS = [
             'rgb(239, 217, 196)', 'rgb(207, 229, 212)', 'rgb(253, 214, 209)', 
@@ -397,14 +423,46 @@
             return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
         }
 
+        function filterByTag(tag) {
+            activeTag = tag;
+            const banner = document.getElementById('filter-banner');
+            document.getElementById('filter-text').textContent = `🔍 ${tag}`;
+            banner.style.display = 'flex';
+            renderTimeline();
+            if(isInputOpen) toggleInput();
+        }
+
+        function clearFilter() {
+            activeTag = null;
+            document.getElementById('filter-banner').style.display = 'none';
+            renderTimeline();
+        }
+
+        function formatContent(text) {
+            if (!text) return '';
+            const safeText = text.replace(/&/g, "&amp;")
+                                 .replace(/</g, "&lt;")
+                                 .replace(/>/g, "&gt;")
+                                 .replace(/"/g, "&quot;")
+                                 .replace(/'/g, "&#039;");
+            
+            return safeText.replace(/(#[\u4e00-\u9fa5\w]+)/g, 
+                '<span class="tag-link" onclick="event.stopPropagation(); filterByTag(\'$1\')">$1</span>');
+        }
+
         function renderTimeline() {
             const container = document.getElementById('timeline-container');
             container.innerHTML = ''; 
 
-            const notes = (currentData.notes || []).sort((a, b) => b.id - a.id);
+            let notesToRender = (currentData.notes || []);
+            if (activeTag) {
+                notesToRender = notesToRender.filter(n => n.text && n.text.includes(activeTag));
+            }
+            notesToRender = notesToRender.sort((a, b) => b.id - a.id);
+
             const groups = {};
             
-            notes.forEach(note => {
+            notesToRender.forEach(note => {
                 let d;
                 if (note.date && !isNaN(Date.parse(note.date))) {
                     d = new Date(note.date);
@@ -428,17 +486,24 @@
             });
 
             const realTodayKey = formatDate(new Date(), true);
-            if (!groups[realTodayKey]) {
-                sortedKeys.unshift(realTodayKey);
-            } else {
-                if(sortedKeys[0] !== realTodayKey) {
-                    const idx = sortedKeys.indexOf(realTodayKey);
-                    if(idx > -1) sortedKeys.splice(idx, 1);
+            if (!activeTag) {
+                if (!groups[realTodayKey]) {
                     sortedKeys.unshift(realTodayKey);
+                } else {
+                    if(sortedKeys[0] !== realTodayKey) {
+                        const idx = sortedKeys.indexOf(realTodayKey);
+                        if(idx > -1) sortedKeys.splice(idx, 1);
+                        sortedKeys.unshift(realTodayKey);
+                    }
                 }
             }
 
             let lastMonthKey = null;
+
+            if (sortedKeys.length === 0 && activeTag) {
+                container.innerHTML = `<div style="text-align:center; padding:50px; opacity:0.5;">未找到标签: ${activeTag}</div>`;
+                return;
+            }
 
             sortedKeys.forEach(key => {
                 const isToday = (key === realTodayKey);
@@ -489,9 +554,7 @@
 
                 container.appendChild(headerWrapper);
 
-                // 如果是今天，无论有无笔记，都创建一个容器放输入框
-                // 这样 toggleInput 可以直接操作这个容器，不需要重新渲染整个时间轴
-                if (isToday) {
+                if (isToday && !activeTag) {
                     const inputContainer = document.createElement('div');
                     inputContainer.id = 'input-wrapper'; 
                     container.appendChild(inputContainer);
@@ -534,7 +597,7 @@
 
                         const content = document.createElement('div');
                         content.className = 'note-content';
-                        content.textContent = note.text || '';
+                        content.innerHTML = formatContent(note.text);
                         card.appendChild(content);
 
                         if (note.img) {
@@ -570,7 +633,7 @@
         function renderInputCard(wrapper) {
             wrapper.innerHTML = `
                 <div id="input-card-container" style="display: flex;">
-                    <textarea id="inputBox" placeholder="记录此刻..." oninput="draftText = this.value">${draftText}</textarea>
+                    <textarea id="inputBox" placeholder="记录此刻...使用 #标签 分类" oninput="draftText = this.value">${draftText}</textarea>
                     <div class="input-actions">
                         <div class="action-btn btn-upload" onclick="document.getElementById('fileInput').click()">
                             <div style="position:relative;">
@@ -627,7 +690,8 @@
                 selectedFile = null; draftText = ""; isInputOpen = false;
                 document.getElementById('fileInput').value = '';
                 
-                renderTimeline(); 
+                if(activeTag) clearFilter();
+                else renderTimeline(); 
 
                 if (fileToUpload) {
                     updateStatus('正在同步图片...');
@@ -669,37 +733,34 @@
             } catch (e) { alert(`⚠️ 保存失败：${e.message}`); updateStatus('保存失败'); }
         }
 
-        // ⭐ 修正核心：现在只操作 DOM，不重新 Render
         function toggleInput() { 
             isInputOpen = !isInputOpen; 
             
             const wrapper = document.getElementById('input-wrapper');
-            // 安全检查：如果 wrapper 不存在（极端情况），回退到重绘
             if (!wrapper) {
-                renderTimeline();
+                if (activeTag) clearFilter(); 
+                else renderTimeline();
                 return;
             }
 
             if (isInputOpen) {
-                // 如果是打开，渲染输入框进去
                 renderInputCard(wrapper);
             } else {
-                // 如果是关闭，找到输入框元素并移除
                 const card = document.getElementById('input-card-container');
-                if (card) {
-                    card.remove(); // 直接移除 DOM 元素
-                }
+                if (card) card.remove();
             }
         }
 
         function toggleActive(card, e) {
+            if (e.target.classList.contains('tag-link')) return;
+
             if (e.target.closest('#input-card-container')) return;
             const wasActive = card.classList.contains('active');
             document.querySelectorAll('.note-card.active').forEach(c => c.classList.remove('active'));
             if (!wasActive) card.classList.add('active');
         }
         document.addEventListener('click', function(e) { 
-            if (!e.target.closest('.note-card') && !e.target.closest('.app-footer') && !e.target.closest('#top-bar-container') && !e.target.closest('.toggle-btn')) {
+            if (!e.target.closest('.note-card') && !e.target.closest('.app-footer') && !e.target.closest('#top-bar-container') && !e.target.closest('.toggle-btn') && !e.target.closest('#filter-banner')) {
                 document.querySelectorAll('.note-card.active').forEach(c => c.classList.remove('active')); 
             }
         });

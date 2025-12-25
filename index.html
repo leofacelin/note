@@ -271,8 +271,9 @@
 
         .img-indicator {
             width: 10px; height: 10px; background: #ff4d4f; border: 2px solid #fff; 
-            border-radius: 50%; position: absolute; top: -2px; right: -2px; 
+            border-radius: 50%; position: absolute; top: 0; right: 0; /* 修改红点位置适配新布局 */
             display: none; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            z-index: 5;
         }
 
         #fileInput { display: none; }
@@ -476,7 +477,6 @@
         function checkConfigAndLoad() {
             if (!BIN_ID || !API_KEY) {
                 updateStatus("⚠️ 未检测到配置");
-                // 延迟一点弹出，体验更好
                 setTimeout(() => {
                     openConfigModal();
                 }, 500);
@@ -756,15 +756,27 @@
             });
         }
 
+        // 📷 更新后的渲染函数：带图片预览
         function renderInputCard(wrapper) {
+            let previewSrc = '';
+            let showPreview = 'none';
+            let showIcon = 'block';
+            
+            if (selectedFile) {
+                previewSrc = URL.createObjectURL(selectedFile);
+                showPreview = 'block';
+                showIcon = 'none';
+            }
+
             wrapper.innerHTML = `
                 <div id="input-card-container" style="display: flex;">
                     <textarea id="inputBox" placeholder="记录此刻...使用 #标签 分类" oninput="draftText = this.value">${draftText}</textarea>
                     <div class="input-actions">
                         <div class="action-btn btn-upload" onclick="document.getElementById('fileInput').click()">
-                            <div style="position:relative;">
-                                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                                <div id="img-dot" class="img-indicator"></div>
+                            <div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+                                <svg id="upload-icon" style="display:${showIcon}; width:24px; height:24px;" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                                <img id="upload-preview" src="${previewSrc}" style="display:${showPreview}; position:absolute; top:0; left:0; width:100%; height:100%; border-radius:50%; object-fit:cover;">
+                                <div id="img-dot" class="img-indicator" style="display:${selectedFile ? 'block' : 'none'};"></div>
                             </div>
                         </div>
                         <div id="btnSave" class="action-btn btn-save" onclick="addNote()">
@@ -773,16 +785,26 @@
                     </div>
                 </div>
             `;
-            if(selectedFile) document.getElementById('img-dot').style.display = 'block';
             setTimeout(() => { const box = document.getElementById('inputBox'); if(box) box.focus(); }, 100);
         }
 
+        // 📷 更新后的文件选择处理
         function handleFileSelect() {
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
             if (file) {
                 selectedFile = file;
-                document.getElementById('img-dot').style.display = 'block';
+                const preview = document.getElementById('upload-preview');
+                const icon = document.getElementById('upload-icon');
+                const dot = document.getElementById('img-dot');
+                
+                if (preview) {
+                    preview.src = URL.createObjectURL(file);
+                    preview.style.display = 'block';
+                }
+                if (icon) icon.style.display = 'none';
+                if (dot) dot.style.display = 'block';
+                
                 document.getElementById('inputBox').focus();
             }
         }

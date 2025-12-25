@@ -18,7 +18,7 @@
         :root {
             --bg-color: #f0f0f0;
             --text-color: #333;
-            --card-bg-default: #fff; /* ✅ 修复：定义默认卡片背景为白色 */
+            --card-bg-default: #fff;
             --header-color: #1a1a1a;
             --timestamp-color: rgba(0, 0, 0, 0.2);
             --shadow-color: rgba(0,0,0,0.05);
@@ -40,6 +40,14 @@
             /* 🏷️ 标签颜色 */
             --tag-text-color: #999; 
             --tag-text-hover: #666;
+            
+            /* ⚙️ 输入框样式 */
+            --input-bg: #fff;
+            --input-border: #ddd;
+            
+            /* 底部图标颜色 */
+            --footer-icon-color: #ccc;
+            --footer-icon-hover: #999;
         }
 
         /* 🌑 深色模式适配 */
@@ -47,7 +55,7 @@
             :root {
                 --bg-color: #121212;
                 --text-color: #b0b0b0; 
-                --card-bg-default: #1e1e1e; /* ✅ 修复：深色模式下输入框为深灰 */
+                --card-bg-default: #1e1e1e;
                 --header-color: #888888; 
                 --timestamp-color: rgba(255, 255, 255, 0.3);
                 --shadow-color: rgba(0,0,0,0.5);
@@ -68,6 +76,12 @@
 
                 --tag-text-color: #777; 
                 --tag-text-hover: #aaa;
+                
+                --input-bg: #2a2a2a;
+                --input-border: #444;
+                
+                --footer-icon-color: #444;
+                --footer-icon-hover: #777;
             }
         }
 
@@ -224,7 +238,7 @@
         
         #input-card-container {
             display: none; 
-            background: var(--card-bg-default); /* ✅ 修复：使用默认卡片背景，浅色为白，深色为深灰 */
+            background: var(--card-bg-default);
             border-radius: 24px; padding: 20px;
             margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             flex-direction: row; height: 180px; 
@@ -275,18 +289,29 @@
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); z-index: 2001; backdrop-filter: blur(2px);
         }
-        #confirmModal {
+        
+        /* 通用 Modal 样式 */
+        .modal-box {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: var(--card-bg-default); /* ✅ 修复：弹窗背景也同步使用默认背景 */
+            background: var(--card-bg-default); 
             padding: 30px; border-radius: 20px; z-index: 2002;
             text-align: center; width: 280px; box-shadow: 0 10px 40px rgba(0,0,0,0.4);
             color: var(--text-color);
         }
+
         .modal-btn {
             padding: 12px 25px; border-radius: 12px; border: none; font-size: 16px; margin: 0 5px; font-weight: bold; cursor: pointer;
         }
         .btn-yes { background: #ff4d4f; color: white; }
         .btn-no { background: rgba(0,0,0,0.1); color: var(--text-color); }
+        .btn-save-cfg { background: #4a90e2; color: white; width: 100%; margin-top: 10px;}
+
+        /* 配置输入框样式 */
+        .cfg-input {
+            width: 100%; padding: 10px; margin-bottom: 10px;
+            border: 1px solid var(--input-border); background: var(--input-bg);
+            color: var(--text-color); border-radius: 8px; font-size: 14px;
+        }
 
         #imageViewerModal {
             display: none; position: fixed; z-index: 3000; top: 0; left: 0;
@@ -302,11 +327,28 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
+        /* 👇 修改后的底部样式 */
         .app-footer {
-            text-align: center; font-size: 11px; color: #999; padding: 40px 0 20px 0;
-            font-family: 'Rubik', sans-serif; opacity: 0.6; margin-top: auto; 
-            cursor: pointer; user-select: none;
+            position: relative; /* 为绝对定位提供参考 */
+            display: flex; justify-content: center; align-items: center;
+            padding: 40px 10px 20px 10px;
+            margin-top: auto;
+            color: #999; font-size: 11px; font-family: 'Rubik', sans-serif;
         }
+        
+        .footer-text {
+            cursor: pointer; opacity: 0.6; user-select: none;
+        }
+
+        /* ⚙️ 底部设置图标 */
+        .settings-icon {
+            position: absolute; right: 20px; /* 靠右对齐 */
+            width: 24px; height: 24px;
+            cursor: pointer; 
+            opacity: 0.4; transition: opacity 0.3s, transform 0.2s;
+        }
+        .settings-icon svg { width: 100%; height: 100%; fill: var(--footer-icon-color); }
+        .settings-icon:hover { opacity: 1; transform: rotate(30deg); fill: var(--footer-icon-hover); }
 
     </style>
 </head>
@@ -330,15 +372,30 @@
 
     <div id="timeline-container"></div>
 
-    <div class="app-footer" onclick="triggerGodMode()">ZINEBONOTE Made with 🙂</div>
+    <div class="app-footer">
+        <span class="footer-text" onclick="triggerGodMode()">ZINEBONOTE Made with 🙂</span>
+        <div class="settings-icon" onclick="openConfigModal()" title="设置 API Key">
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.04.17 0 .34.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.58 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.04-.22 0-.45-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        </div>
+    </div>
 
     <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect()">
 
     <div id="modalOverlay" onclick="closeModal()"></div>
-    <div id="confirmModal">
+    
+    <div id="confirmModal" class="modal-box">
         <p style="margin: 0 0 25px; font-size: 20px; font-weight: bold;">确定删除吗？</p>
         <button class="modal-btn btn-yes" onclick="confirmDelete()">删除</button>
         <button class="modal-btn btn-no" onclick="closeModal()">取消</button>
+    </div>
+
+    <div id="configModal" class="modal-box">
+        <p style="margin: 0 0 15px; font-size: 18px; font-weight: bold;">🔧 API 配置</p>
+        <div style="font-size:12px; margin-bottom:15px; opacity:0.7; text-align:left;">配置保存在本地浏览器，清除缓存需重新输入。</div>
+        <input id="cfgBinId" class="cfg-input" placeholder="JSONBin Bin ID">
+        <input id="cfgApiKey" class="cfg-input" placeholder="JSONBin Master Key" type="password">
+        <input id="cfgImgKey" class="cfg-input" placeholder="ImgBB API Key (可选)" type="password">
+        <button class="modal-btn btn-save-cfg" onclick="saveConfig()">保存并重载</button>
     </div>
 
     <div id="imageViewerModal" onclick="closeImageViewer()">
@@ -347,19 +404,12 @@
 
     <script>
         // ==========================================
-        // 👇 配置区 👇
+        // 👇 配置区：从本地存储读取 👇
         // ==========================================
-        const BIN_ID = '692adac043b1c97be9cca688'; 
-        const API_KEY = '$2a$10$ebskDQwSsOfisis5TCXKdOHQ4LlGGnXpggBygD6/bcWPenwaHVAgi';
-        const  IMGBB_KEY = '08cce3fc7e17f608d3d26c37f4dac6be';     
+        let BIN_ID = localStorage.getItem('zbn_bin_id'); 
+        let API_KEY = localStorage.getItem('zbn_api_key');
+        let IMGBB_KEY = localStorage.getItem('zbn_img_key');     
         // ==========================================
-
-        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-        
-        const REQ_HEADERS = {
-            'Content-Type': 'application/json',
-            'X-Master-Key': API_KEY 
-        };
 
         let currentData = { notes: [] };
         let pendingDeleteId = null;
@@ -368,7 +418,6 @@
         let draftText = "";
         let activeTag = null; 
         
-        // 🎨 使用CSS变量名
         const DAY_COLORS = [
             'var(--note-bg-1)', 
             'var(--note-bg-2)', 
@@ -393,6 +442,48 @@
         let isGodMode = false;
         let godModeClicks = 0;
         let godModeTimer = null;
+
+        // ⚙️ 打开配置窗口
+        function openConfigModal() {
+            document.getElementById('cfgBinId').value = BIN_ID || '';
+            document.getElementById('cfgApiKey').value = API_KEY || '';
+            document.getElementById('cfgImgKey').value = IMGBB_KEY || '';
+            
+            document.getElementById('modalOverlay').style.display = 'block';
+            document.getElementById('configModal').style.display = 'block';
+        }
+
+        // ⚙️ 保存配置
+        function saveConfig() {
+            const newBinId = document.getElementById('cfgBinId').value.trim();
+            const newApiKey = document.getElementById('cfgApiKey').value.trim();
+            const newImgKey = document.getElementById('cfgImgKey').value.trim();
+
+            if (!newBinId || !newApiKey) {
+                alert("Bin ID 和 Master Key 不能为空");
+                return;
+            }
+
+            localStorage.setItem('zbn_bin_id', newBinId);
+            localStorage.setItem('zbn_api_key', newApiKey);
+            localStorage.setItem('zbn_img_key', newImgKey);
+
+            alert("配置已保存，页面将刷新");
+            location.reload();
+        }
+
+        // 🔍 检查配置是否就绪
+        function checkConfigAndLoad() {
+            if (!BIN_ID || !API_KEY) {
+                updateStatus("⚠️ 未检测到配置");
+                // 延迟一点弹出，体验更好
+                setTimeout(() => {
+                    openConfigModal();
+                }, 500);
+            } else {
+                loadData();
+            }
+        }
 
         function triggerGodMode() {
             godModeClicks++;
@@ -428,6 +519,7 @@
         }
 
         async function loadData() {
+            const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
             const localCache = localStorage.getItem('zinebonote_v1_data'); 
             if (localCache) {
                 currentData = JSON.parse(localCache);
@@ -435,6 +527,13 @@
             }
             try {
                 const res = await fetch(API_URL, { method: 'GET', headers: { 'X-Master-Key': API_KEY } });
+                
+                if (res.status === 401 || res.status === 403) {
+                    updateStatus("❌ 鉴权失败，请检查配置");
+                    openConfigModal();
+                    return;
+                }
+                
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
                 currentData = json.record;
@@ -689,6 +788,12 @@
         }
 
         async function addNote() {
+            if (!API_KEY || !BIN_ID) {
+                alert("请先点击设置按钮配置 API Key");
+                openConfigModal();
+                return;
+            }
+
             const btnSave = document.getElementById('btnSave');
             try {
                 const box = document.getElementById('inputBox');
@@ -721,17 +826,24 @@
                 else renderTimeline(); 
 
                 if (fileToUpload) {
-                    updateStatus('正在同步图片...');
-                    const realUrl = await uploadImage(fileToUpload);
-                    if (realUrl) {
-                        const targetNote = currentData.notes.find(n => n.id === tempId);
-                        if (targetNote) { targetNote.img = realUrl; await saveData(); }
-                    } else {
-                        updateStatus('图片失败，已存文字');
-                        alert('⚠️ 图片上传失败，但文字已保存。');
+                    if (!IMGBB_KEY) {
+                        alert("未配置 ImgBB Key，无法上传图片。请在设置中配置。");
                         const targetNote = currentData.notes.find(n => n.id === tempId);
                         if(targetNote) targetNote.img = null; 
-                        renderTimeline(); await saveData(); 
+                        await saveData(); 
+                    } else {
+                        updateStatus('正在同步图片...');
+                        const realUrl = await uploadImage(fileToUpload);
+                        if (realUrl) {
+                            const targetNote = currentData.notes.find(n => n.id === tempId);
+                            if (targetNote) { targetNote.img = realUrl; await saveData(); }
+                        } else {
+                            updateStatus('图片失败，已存文字');
+                            alert('⚠️ 图片上传失败，但文字已保存。');
+                            const targetNote = currentData.notes.find(n => n.id === tempId);
+                            if(targetNote) targetNote.img = null; 
+                            renderTimeline(); await saveData(); 
+                        }
                     }
                 } else {
                     updateStatus('正在保存...');
@@ -752,6 +864,11 @@
         }
 
         async function saveData() {
+            const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+            const REQ_HEADERS = {
+                'Content-Type': 'application/json',
+                'X-Master-Key': API_KEY 
+            };
             try {
                 const res = await fetch(API_URL, { method: 'PUT', headers: REQ_HEADERS, body: JSON.stringify(currentData) });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -787,7 +904,7 @@
             if (!wasActive) card.classList.add('active');
         }
         document.addEventListener('click', function(e) { 
-            if (!e.target.closest('.note-card') && !e.target.closest('.app-footer') && !e.target.closest('#top-bar-container') && !e.target.closest('.toggle-btn') && !e.target.closest('#filter-banner')) {
+            if (!e.target.closest('.note-card') && !e.target.closest('.app-footer') && !e.target.closest('#top-bar-container') && !e.target.closest('.toggle-btn') && !e.target.closest('#filter-banner') && !e.target.closest('.modal-box')) {
                 document.querySelectorAll('.note-card.active').forEach(c => c.classList.remove('active')); 
             }
         });
@@ -811,6 +928,7 @@
         function closeModal() {
             document.getElementById('modalOverlay').style.display = 'none';
             document.getElementById('confirmModal').style.display = 'none';
+            document.getElementById('configModal').style.display = 'none';
             pendingDeleteId = null;
         }
 
@@ -832,7 +950,8 @@
         function openImageViewer(src) { document.getElementById('expandedImage').src = src; document.getElementById('imageViewerModal').style.display = 'flex'; }
         function closeImageViewer() { document.getElementById('imageViewerModal').style.display = 'none'; document.getElementById('expandedImage').src = ''; }
 
-        loadData();
+        // 🚀 启动检查
+        checkConfigAndLoad();
     </script>
 </body>
 </html>
